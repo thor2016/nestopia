@@ -518,7 +518,9 @@ namespace Nes
 
 					case AsciiId<'P','O','W'>::V:
 
+						// The boot frame draws nothing, so clear it as Reset() does
 						cycles.hClock = HCLOCK_BOOT;
+						screen.Clear();
 						break;
 				}
 
@@ -599,7 +601,7 @@ namespace Nes
 			return cycles.one == PPU_RP2C02_CC ? clock / PPU_RP2C02_CC : (clock+PPU_RP2C07_CC-1) / PPU_RP2C07_CC;
 		}
 
-		void Ppu::BeginFrame(bool frameLock)
+		void Ppu::BeginFrame()
 		{
 			NST_ASSERT
 			(
@@ -609,7 +611,7 @@ namespace Nes
 				(cpu.GetModel() == CPU_DENDY)  == (model == PPU_DENDY)
 			);
 
-			oam.limit = oam.buffer + ((oam.spriteLimit || frameLock) ? Oam::STD_LINE_SPRITES*4 : Oam::MAX_LINE_SPRITES*4);
+			oam.limit = oam.buffer + (oam.spriteLimit ? Oam::STD_LINE_SPRITES*4 : Oam::MAX_LINE_SPRITES*4);
 			output.target = output.pixels;
 
 			Cycle frame;

@@ -46,7 +46,7 @@ namespace Nes
 
 		bool Machine::IsLocked() const
 		{
-			return emulator.tracker.IsLocked();
+			return false;
 		}
 
 		Result Machine::Load(std::istream& stream,FavoredSystem system,AskProfile ask,Patch* patch,uint type)
@@ -159,7 +159,7 @@ namespace Nes
 
 		Result Machine::Reset(const bool hard) throw()
 		{
-			if (!Is(ON) || IsLocked())
+			if (!Is(ON))
 				return RESULT_ERR_NOT_READY;
 
 			try
@@ -224,12 +224,11 @@ namespace Nes
 
 		Result Machine::LoadState(std::istream& stream) throw()
 		{
-			if (!Is(GAME,ON) || IsLocked())
+			if (!Is(GAME,ON))
 				return RESULT_ERR_NOT_READY;
 
 			try
 			{
-				emulator.tracker.Resync();
 				Core::State::Loader loader( &stream, true );
 
 				if (emulator.LoadState( loader, true ))
@@ -276,6 +275,5 @@ namespace Nes
 
 			return RESULT_OK;
 		}
-
 	}
 }

@@ -78,8 +78,8 @@ namespace Nes
 		{
 			if (Core::Input::FamilyKeyboard* const familyKeyboard = Query())
 			{
-				if (emulator.Is(Machine::ON) && !emulator.tracker.IsLocked())
-					return emulator.tracker.TryResync( familyKeyboard->PlayTape() );
+				if (emulator.Is(Machine::ON))
+					return familyKeyboard->PlayTape();
 			}
 
 			return RESULT_ERR_NOT_READY;
@@ -89,8 +89,8 @@ namespace Nes
 		{
 			if (Core::Input::FamilyKeyboard* const familyKeyboard = Query())
 			{
-				if (emulator.Is(Machine::ON) && !emulator.tracker.IsLocked())
-					return emulator.tracker.TryResync( familyKeyboard->RecordTape() );
+				if (emulator.Is(Machine::ON))
+					return familyKeyboard->RecordTape();
 			}
 
 			return RESULT_ERR_NOT_READY;
@@ -102,15 +102,11 @@ namespace Nes
 			{
 				if (familyKeyboard->IsTapePlaying() || familyKeyboard->IsTapeRecording())
 				{
-					if (emulator.tracker.IsLocked())
-						return RESULT_ERR_NOT_READY;
-
-					return emulator.tracker.TryResync( familyKeyboard->StopTape() );
+					return familyKeyboard->StopTape();
 				}
 			}
 
 			return RESULT_NOP;
 		}
-
 	}
 }

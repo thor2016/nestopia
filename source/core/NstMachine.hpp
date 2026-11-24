@@ -29,12 +29,7 @@
 #include <iosfwd>
 #include "NstCpu.hpp"
 #include "NstPpu.hpp"
-#include "NstTracker.hpp"
 #include "NstVideoRenderer.hpp"
-
-#ifdef NST_PRAGMA_ONCE
-#pragma once
-#endif
 
 namespace Nes
 {
@@ -68,6 +63,18 @@ namespace Nes
 
 			Machine();
 			~Machine();
+
+			Result ExecuteFrame
+			(
+				Video::Output*,
+				Sound::Output*,
+				Input::Controllers*
+			);
+
+			dword Frame() const
+			{
+				return execFrames;
+			}
 
 			void Execute
 			(
@@ -124,6 +131,7 @@ namespace Nes
 
 			uint state;
 			dword frame;
+			dword execFrames;
 			bool systemForced;
 
 		public:
@@ -144,7 +152,6 @@ namespace Nes
 			Cheats* cheats;
 			Homebrew* homebrew;
 			ImageDatabase* imageDatabase;
-			Tracker tracker;
 			Ppu ppu;
 			Video::Renderer renderer;
 

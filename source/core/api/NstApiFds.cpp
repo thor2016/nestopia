@@ -74,8 +74,8 @@ namespace Nes
 
 		Result Fds::InsertDisk(uint disk,uint side) throw()
 		{
-			if (emulator.Is(Machine::DISK) && !emulator.tracker.IsLocked())
-				return emulator.tracker.TryResync( static_cast<Core::Fds*>(emulator.image)->InsertDisk( disk, side ) );
+			if (emulator.Is(Machine::DISK))
+				return static_cast<Core::Fds*>(emulator.image)->InsertDisk( disk, side );
 
 			return RESULT_ERR_NOT_READY;
 		}
@@ -92,8 +92,8 @@ namespace Nes
 
 		Result Fds::EjectDisk() throw()
 		{
-			if (emulator.Is(Machine::DISK) && !emulator.tracker.IsLocked())
-				return emulator.tracker.TryResync( static_cast<Core::Fds*>(emulator.image)->EjectDisk() );
+			if (emulator.Is(Machine::DISK))
+				return static_cast<Core::Fds*>(emulator.image)->EjectDisk();
 
 			return RESULT_ERR_NOT_READY;
 		}
@@ -219,6 +219,5 @@ namespace Nes
 		{
 			return emulator.Is(Machine::DISK) && static_cast<const Core::Fds*>(emulator.image)->HasHeader();
 		}
-
 	}
 }

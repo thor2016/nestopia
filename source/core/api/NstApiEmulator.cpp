@@ -46,12 +46,12 @@ namespace Nes
 			Core::Input::Controllers* input
 		)   throw()
 		{
-			return machine.tracker.Execute( machine, video, sound, input );
+			return machine.ExecuteFrame( video, sound, input );
 		}
 
 		ulong Emulator::Frame() const throw()
 		{
-			return machine.tracker.Frame();
+			return machine.Frame();
 		}
 	}
 }

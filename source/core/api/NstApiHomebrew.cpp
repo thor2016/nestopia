@@ -34,22 +34,15 @@ namespace Nes
 	{
 		Result Homebrew::SetExitPort(ushort address) throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			try
 			{
 				if (emulator.homebrew == NULL)
 					emulator.homebrew = new Core::Homebrew( emulator.cpu );
 
-				return emulator.tracker.TryResync
+				return emulator.homebrew->SetExitPort
 				(
-					emulator.homebrew->SetExitPort
-					(
-						address,
-						emulator.Is(Machine::GAME)
-					),
-					true
+					address,
+					emulator.Is(Machine::GAME)
 				);
 			}
 			catch (const std::bad_alloc&)
@@ -64,17 +57,10 @@ namespace Nes
 
 		Result Homebrew::ClearExitPort() throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			if (!emulator.homebrew)
 				return RESULT_ERR_INVALID_PARAM;
 
-			const Result result = emulator.tracker.TryResync
-			(
-				emulator.homebrew->ClearExitPort(),
-				true
-			);
+			const Result result = 				emulator.homebrew->ClearExitPort();
 
 			if (!emulator.homebrew->NumPorts())
 			{
@@ -87,22 +73,15 @@ namespace Nes
 
 		Result Homebrew::SetStdOutPort(ushort address) throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			try
 			{
 				if (emulator.homebrew == NULL)
 					emulator.homebrew = new Core::Homebrew( emulator.cpu );
 
-				return emulator.tracker.TryResync
+				return emulator.homebrew->SetStdOutPort
 				(
-					emulator.homebrew->SetStdOutPort
-					(
-						address,
-						emulator.Is(Machine::GAME)
-					),
-					true
+					address,
+					emulator.Is(Machine::GAME)
 				);
 			}
 			catch (const std::bad_alloc&)
@@ -117,17 +96,10 @@ namespace Nes
 
 		Result Homebrew::ClearStdOutPort() throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			if (!emulator.homebrew)
 				return RESULT_ERR_INVALID_PARAM;
 
-			const Result result = emulator.tracker.TryResync
-			(
-				emulator.homebrew->ClearStdOutPort(),
-				true
-			);
+			const Result result = 				emulator.homebrew->ClearStdOutPort();
 
 			if (!emulator.homebrew->NumPorts())
 			{
@@ -140,22 +112,15 @@ namespace Nes
 
 		Result Homebrew::SetStdErrPort(ushort address) throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			try
 			{
 				if (emulator.homebrew == NULL)
 					emulator.homebrew = new Core::Homebrew( emulator.cpu );
 
-				return emulator.tracker.TryResync
+				return emulator.homebrew->SetStdErrPort
 				(
-					emulator.homebrew->SetStdErrPort
-					(
-						address,
-						emulator.Is(Machine::GAME)
-					),
-					true
+					address,
+					emulator.Is(Machine::GAME)
 				);
 			}
 			catch (const std::bad_alloc&)
@@ -170,17 +135,10 @@ namespace Nes
 
 		Result Homebrew::ClearStdErrPort() throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			if (!emulator.homebrew)
 				return RESULT_ERR_INVALID_PARAM;
 
-			const Result result = emulator.tracker.TryResync
-			(
-				emulator.homebrew->ClearStdErrPort(),
-				true
-			);
+			const Result result = 				emulator.homebrew->ClearStdErrPort();
 
 			if (!emulator.homebrew->NumPorts())
 			{
@@ -198,21 +156,16 @@ namespace Nes
 
 		Result Homebrew::ClearPorts() throw()
 		{
-			if (emulator.tracker.IsLocked( true ))
-				return RESULT_ERR_NOT_READY;
-
 			if (!emulator.homebrew)
 				return RESULT_NOP;
 
 			if (emulator.homebrew->NumPorts())
-				emulator.tracker.Resync( true );
 
 			delete emulator.homebrew;
 			emulator.homebrew = NULL;
 
 			return RESULT_OK;
 		}
-
 	}
 }
 

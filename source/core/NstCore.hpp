@@ -35,61 +35,7 @@
 #define NST_WIN32
 #endif
 
-#if NST_MSVC
-
- #pragma warning( disable : 4018 4100 4127 4244 4245 4308 4309 4310 4512 4800 4996 )
-
- #if NST_MSVC >= 800
-
-  #ifdef NST_WIN32
-  #define NST_FASTCALL __fastcall
-  #define NST_REGCALL NST_FASTCALL
-  #endif
-
-  #if NST_MSVC >= 1200
-
-   #ifndef _DEBUG
-   #define NST_MSVC_OPTIMIZE
-   #define NST_FORCE_INLINE __forceinline
-   #pragma inline_depth( 255 )
-   #pragma inline_recursion( on )
-   #endif
-
-   #define NST_SINGLE_CALL __forceinline
-
-   #if NST_MSVC >= 1300
-
-	#ifndef NST_NO_INLINE
-	#define NST_NO_INLINE __declspec(noinline)
-	#endif
-
-	#ifndef NST_ASSUME
-	#define NST_ASSUME(x_) __assume(x_)
-	#endif
-
-	#ifndef NST_DEBUG
-	#define NST_UNREACHABLE() __assume(0)
-	#endif
-
-	#define NST_NO_VTABLE __declspec(novtable)
-
-	#if NST_MSVC >= 1400
-
-     #ifndef NST_RESTRICT
-     #define NST_RESTRICT __restrict
-     #endif
-
-     #pragma warning( default : 4191 4263 4287 4289 4296 4350 4545 4546 4547 4549 4555 4557 4686 4836 4905 4906 4928 4946 )
-
-	#endif
-
-   #endif
-
-  #endif
-
- #endif
-
-#elif NST_GCC
+#if NST_GCC
 
  #if NST_GCC >= 291
 
@@ -112,16 +58,6 @@
 
   #endif
 
- #endif
-
-#endif
-
-#if NST_ICC
-
- #pragma warning( disable : 11 69 304 373 383 444 810 869 981 1418 1572 1599 1786 )
-
- #if !defined(NST_RESTRICT) && NST_ICC >= 810
- #define NST_RESTRICT restrict
  #endif
 
 #endif
