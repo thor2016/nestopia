@@ -16,3 +16,8 @@ add_test(NAME gui_smoke COMMAND gui_smoke_test "${NESTOPIAQT_TEST_ROM}")
 set_tests_properties(gui_smoke PROPERTIES
     SKIP_RETURN_CODE 77
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SDL_AUDIODRIVER=dummy")
+
+# Headless test ROM runner, a tool and not a ctest case
+add_executable(nst_test_runner nst_test_runner.cpp)
+target_link_libraries(nst_test_runner PRIVATE nestopiaqt_shell)
+target_compile_definitions(nst_test_runner PRIVATE NST_RUNNER_DATABASE="${NESTOPIA_ROOT}/NstDatabase.xml")

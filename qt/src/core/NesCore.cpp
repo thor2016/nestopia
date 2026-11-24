@@ -11,6 +11,8 @@
 #include <QtDebug>
 
 #include "audio/AudioDriver.h"
+#include "NstCpu.hpp"
+#include "NstMachine.hpp"
 
 namespace
 {
@@ -111,12 +113,17 @@ bool NesCore::loadRom(const QString &path, QString &error)
 	const QByteArray data = file.readAll();
 	file.close();
 
+	return loadRomData(data, QFileInfo(path).completeBaseName(), error);
+}
+
+bool NesCore::loadRomData(const QByteArray &data, const QString &name, QString &error)
+{
 	unload();
 
 	std::istringstream stream(std::string(data.constData(), size_t(data.size())), std::ios::in | std::ios::binary);
 
 	// The file callbacks derive the save file name from this
-	romBaseName = QFileInfo(path).completeBaseName();
+	romBaseName = name;
 
 	const Nes::Result result = machine.Load(stream, Machine::FAVORED_NES_NTSC, Machine::DONT_ASK_PROFILE);
 
@@ -255,6 +262,13 @@ void NesCore::setPadButtons(int port, unsigned int buttons)
 	{
 		controllers.pad[port].buttons = buttons;
 	}
+}
+
+unsigned int NesCore::peekCpu(unsigned int address)
+{
+	Nes::Core::Machine &core = emulator;
+
+	return core.cpu.Peek(address & 0xFFFF);
 }
 
 void NesCore::runFrame(void)

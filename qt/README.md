@@ -30,6 +30,32 @@ audio rate matching and keyboard and (virtual) joystick input. `gui_smoke` build
 main window and the input dialog on the offscreen platform. Setting
 `NESTOPIAQT_TEST_AUDIO=sdl` or `qt` runs `emu_smoke` against a real audio device.
 
+## Accuracy runner
+
+`nst_test_runner` runs test ROMs headless, one child process per ROM and several in
+parallel, and prints a result per ROM:
+
+    ./build/tests/nst_test_runner --manifest /path/to/nes-test-roms/test_roms.xml
+    ./build/tests/nst_test_runner /path/to/nes-test-roms/instr_test-v5
+    ./build/tests/nst_test_runner --manifest ... --baseline qt/tests/baselines/nes-test-roms.tsv
+
+* `pass` and `fail:XX`: the ROM reports through the blargg protocol, status byte at
+  `$6000` and text from `$6004`, valid while `$6001-$6003` hold `DE B0 61`. Status `$81`
+  makes the runner reset the machine 10 frames later, as the protocol asks. Because
+  these ROMs usually declare no PRG RAM, the runner patches a copy of the image in
+  memory to declare 8K, `--keep-header` turns that off.
+* `screen:<hash>`: the ROM only shows its result on screen. The runner runs the number of
+  frames of the manifest (`--screen-frames` without a manifest) and hashes the picture.
+  The hash only tells whether the picture changed, not whether it is correct.
+* `timeout`, `loaderror`, `crash`, `wall-timeout`, `missing`.
+* `--baseline` compares every result with a saved file and exits with 1 on a difference,
+  `--write-baseline` writes one, `--tsv` writes everything including messages and hashes.
+  `qt/tests/baselines/nes-test-roms.tsv` holds the results for `test_roms.xml` of the
+  nes-test-roms collection. Screen hashes depend on the core, so a changed core changes
+  them on purpose and the file is regenerated after checking the pictures.
+* The REF column is the result recorded in the manifest. A `!` marks a ROM where the
+  protocol result differs from it.
+
 ## Threading model
 
 * `EmulationThread` runs `NesCore` on its own thread and paces it with a monotonic

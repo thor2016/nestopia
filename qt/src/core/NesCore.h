@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <QString>
+#include <QByteArray>
 
 #include "NstApiEmulator.hpp"
 #include "NstApiMachine.hpp"
@@ -54,6 +55,8 @@ class NesCore
 		// Loads an image, powers the machine on. On failure returns false and
 		// fills error.
 		bool loadRom(const QString &path, QString &error);
+		// Same for an image that is already in memory, name is used for save files
+		bool loadRomData(const QByteArray &image, const QString &name, QString &error);
 		void unload(void);
 		bool isLoaded(void) const;
 		QString romName(void) const { return romBaseName; }
@@ -85,6 +88,11 @@ class NesCore
 
 		// Sets the NES button bits (Nes::Api::Input::Controllers::Pad) of a port
 		void setPadButtons(int port, unsigned int buttons);
+
+		// Reads a byte of the CPU address space without advancing the machine.
+		// Intended for RAM and cartridge RAM, reads of registers with side
+		// effects are not suitable.
+		unsigned int peekCpu(unsigned int address);
 
 	private:
 		static void NST_CALLBACK fileIoCallback(void *userData, Nes::Api::User::File &file);
