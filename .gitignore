@@ -12,6 +12,8 @@
 *~
 .npmignore
 source/core/database/
+build/
+build-*/
 
 # Autotools cruft
 Makefile

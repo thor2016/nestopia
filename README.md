@@ -1,50 +1,31 @@
-This repository contains the sources required to build the legacy win32 release
-of Nestopia UE. Future work on Nestopia as a GUI-based project will be done
-on a cross-platform build that is the same on every platform, handled under
-the [Jolly Good Emulation](https://jgemu.gitlab.io) project. Releases are available
-here: [jgbuilds](https://github.com/jgemu/jgbuilds)
+# Nestopia
 
-## Cross-Platform build
-To build using the new system, clone the following repositories:
-https://gitlab.com/jgemu/nestopia
-https://gitlab.com/jgemu/qtea
+A fork of Nestopia with a cross-platform Qt 6 GUI. The Win32 GUI was removed, the
+last revision that has it is tagged `win32-legacy`.
 
-Build the Nestopia core:
-```
-cd nestopia
-make ENABLE_STATIC_JG=1 DISABLE_MODULE=1
-```
+* `source/core`: the Nestopia emulation core. It is synchronized with
+  [JG Nestopia](https://gitlab.com/jgemu/nestopia) and is being extended with debugging
+  hooks, see `Core updates` below.
+* `qt`: the Qt and SDL2 GUI, see [qt/README.md](qt/README.md).
 
-Build the QTea frontend against the Nestopia core:
-```
-cd ..
-cd qtea
-mkdir nestopia
-cd nestopia
-cmake .. -DQTEA_CORE_DIR=/path/to/nestopia/nestopia
-make
-```
+## Build
 
-## About
-This project started as a fork of the original Nestopia source code, plus the
-Linux port. The purpose of the project is to make sure people who want
-a standalone GUI for the Nestopia emulator have this option available.
+    cmake -S qt -B build
+    cmake --build build -j
+    ./build/nestopiaqt [rom.nes]
 
-Project Goals:
-* Maintain a functional GUI release of the Nestopia emulator on major desktop platforms
+## Core updates
 
-Contributing/Issues:
-* Contributions will be reviewed for anything related to the standalone GUI builds
-* Issues related to core emulation will be closed. This project no longer maintains the core emulator. Please submit issues about core emulation upstream at https://gitlab.com/jgemu/nestopia
-* When not using a tagged release, please understand that the code is volatile and nothing is set in stone.
+JG snapshots are kept unmodified on the `vendor/jg` branch (`source/core`,
+`source/nes_ntsc`, `NstDatabase.xml`, `LICENSES`), with the JG commit hash in the commit
+message. To update the core, commit the new snapshot on that branch and merge it. The
+branches have unrelated histories, the first merge made the imported snapshot the merge
+base.
 
-## Cheats
-If you want the best database of cheats available in Nestopia format, make sure you check out
-[Mighty Mo's Cheat Code Pack](https://github.com/mightymo77/MightyMos-Cheat-Code-Pack/releases).
+Core changes made here stay on top of the vendored snapshot, so they show up as ordinary
+merge results.
 
-## Win32 Build
-To build the win32 solution with Visual Studio 2010:
-1. Ensure you have the DirectX 9 SDK
-2. Manually zip NstDatabase.xml to the destination source/core/database/NstDatabase.zip
-3. Open projects/nestopia.sln
-4. Build in release mode
+## License
+
+Nestopia is licensed under the GNU General Public License, version 2 or later. See
+`COPYING`, `COPYRIGHT` and `LICENSES`.
