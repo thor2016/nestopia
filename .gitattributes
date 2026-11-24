@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.pal binary
+*.ico binary
+*.bmp binary
+*.png binary
+*.lib binary
