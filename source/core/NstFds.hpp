@@ -512,6 +512,8 @@ namespace Nes
 			/* 32k of program RAM the BIOS loads disk content into, mapped from
 			 * $6000 upwards. This is where FDS game state lives.
 			*/
+			bool PeekDebug(uint,uint&) const;
+
 			MemoryRegion GetMemoryRegion(uint index) const
 			{
 				MemoryRegion region;

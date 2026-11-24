@@ -226,6 +226,16 @@ namespace Nes
 			return Image::GetMemoryRegion( index );
 		}
 
+		bool Cartridge::PeekDebug(const uint address,uint& data) const
+		{
+			return board && board->PeekDebug( address, data );
+		}
+
+		long Cartridge::GetPrgRomOffset(const uint address) const
+		{
+			return board ? board->GetPrgRomOffset( address ) : -1;
+		}
+
 		Cartridge::ExternalDevice Cartridge::QueryExternalDevice(ExternalDeviceType deviceType)
 		{
 			switch (deviceType)

@@ -9,6 +9,26 @@ set_tests_properties(emu_smoke PROPERTIES
     SKIP_RETURN_CODE 77
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(debugger_smoke_test debugger_smoke_test.cpp)
+target_link_libraries(debugger_smoke_test PRIVATE nestopiaqt_shell)
+
+add_test(NAME debugger_smoke
+    COMMAND debugger_smoke_test "${NESTOPIAQT_TEST_ROM}" "${NESTOPIA_ROOT}/NstDatabase.xml")
+set_tests_properties(debugger_smoke PROPERTIES
+    SKIP_RETURN_CODE 77
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(disassembler_test disassembler_test.cpp)
+target_link_libraries(disassembler_test PRIVATE nestopiaqt_shell)
+add_test(NAME disassembler COMMAND disassembler_test)
+
+add_executable(debugger_widget_test debugger_widget_test.cpp)
+target_link_libraries(debugger_widget_test PRIVATE nestopiaqt_shell)
+add_test(NAME debugger_widget COMMAND debugger_widget_test)
+set_tests_properties(debugger_widget PROPERTIES
+    TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(gui_smoke_test gui_smoke_test.cpp)
 target_link_libraries(gui_smoke_test PRIVATE nestopiaqt_shell)
 

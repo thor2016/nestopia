@@ -73,6 +73,29 @@ namespace Nes
 			uint GetPixelCycles() const;
 			void EnableCpuSynchronization();
 
+			/* Register state for a debugger. The PPU is not caught up to the
+			 * CPU, so status reflects the last synchronization. The position is
+			 * derived from the CPU clock and is exact at instruction boundaries.
+			*/
+			struct DebugState
+			{
+				int scanline;       // -1 for the pre-render line
+				uint dot;
+				uint linesPerFrame;
+				uint ctrl;
+				uint mask;
+				uint status;
+				uint oamAddress;
+				uint vramAddress;
+				uint tempAddress;
+				uint fineX;
+				uint writeToggle;
+			};
+
+			void GetDebugState(DebugState&) const;
+			// Frame-relative CPU master clock at which the next scanline starts
+			Cycle GetDebugNextScanlineCycles() const;
+
 			void LoadState(State::Loader&);
 			void SaveState(State::Saver&,dword) const;
 

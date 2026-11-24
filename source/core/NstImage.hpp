@@ -162,6 +162,22 @@ namespace Nes
 				return region;
 			}
 
+			/* Debugger view of the CPU bus from $4020 up. Reads go straight to
+			 * the mapped memory and never through the mapper's read handlers,
+			 * so they have no side effects. False where there is nothing that
+			 * can be read that way.
+			*/
+			virtual bool PeekDebug(uint,uint&) const
+			{
+				return false;
+			}
+
+			// Offset into PRG ROM of a CPU address as currently banked, or -1
+			virtual long GetPrgRomOffset(uint) const
+			{
+				return -1;
+			}
+
 		protected:
 
 			explicit Image(Type);

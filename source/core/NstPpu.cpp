@@ -865,6 +865,136 @@ namespace Nes
 			return (scanline+1)-1U < 240 ? scanline * 256 + NST_MIN(cycles.hClock,255) : ~0U;
 		}
 
+		namespace
+		{
+			/* A CPU frame starts at the first VBlank line and runs through the
+			 * pre-render line and the visible lines to the end of post-render.
+			 * The power-on frame instead ends at VBlank having started part way
+			 * into line 0, and an odd NTSC frame with rendering on has a
+			 * pre-render line one dot short.
+			*/
+			struct DebugFrame
+			{
+				long vblankLine;
+				long vblankDots;
+				long preRenderDots;
+				long bootOffset;
+				bool boot;
+			};
+
+			enum
+			{
+				DEBUG_LINE_DOTS = 341
+			};
+
+			DebugFrame GetDebugFrame(const PpuModel model,const Cycle frameCycles)
+			{
+				DebugFrame frame;
+				long vsleep, vint, cc;
+				Cycle boot;
+
+				switch (model)
+				{
+					case PPU_RP2C07:
+
+						vsleep = PPU_RP2C07_VSLEEP;
+						vint = PPU_RP2C07_VINT;
+						cc = PPU_RP2C07_CC;
+						boot = PPU_RP2C07_HVSYNCBOOT;
+						break;
+
+					case PPU_DENDY:
+
+						vsleep = PPU_DENDY_VSLEEP;
+						vint = PPU_DENDY_VINT;
+						cc = PPU_DENDY_CC;
+						boot = PPU_DENDY_HVSYNCBOOT;
+						break;
+
+					default:
+
+						vsleep = PPU_RP2C02_VSLEEP;
+						vint = PPU_RP2C02_VINT;
+						cc = PPU_RP2C02_CC;
+						boot = PPU_RP2C02_HVSYNCBOOT;
+						break;
+				}
+
+				frame.vblankLine = PPU_RP2C02_VACTIVE + vsleep;
+				frame.vblankDots = vint * DEBUG_LINE_DOTS;
+				frame.boot = (frameCycles == boot);
+				frame.preRenderDots = DEBUG_LINE_DOTS - (model == PPU_RP2C02 && frameCycles == PPU_RP2C02_HVSYNC_1 ? 1 : 0);
+				frame.bootOffset = frame.vblankLine * DEBUG_LINE_DOTS - long(frameCycles / cc);
+
+				return frame;
+			}
+
+			// Dots from the start of line 0 for frame-relative dot d, or -1 while
+			// in VBlank or on the pre-render line.
+			long GetDebugLineDots(const DebugFrame& frame,const long d)
+			{
+				if (frame.boot)
+					return d + frame.bootOffset;
+
+				if (d < frame.vblankDots + frame.preRenderDots)
+					return -1;
+
+				return d - frame.vblankDots - frame.preRenderDots;
+			}
+		}
+
+		void Ppu::GetDebugState(DebugState& state) const
+		{
+			const DebugFrame frame( GetDebugFrame( model, cpu.GetFrameCycles() ) );
+			const long d = long(GetLocalCycles( cpu.GetCycles() ));
+			const long lineDots = GetDebugLineDots( frame, d );
+
+			if (lineDots >= 0)
+			{
+				state.scanline = int(lineDots / DEBUG_LINE_DOTS);
+				state.dot = uint(lineDots % DEBUG_LINE_DOTS);
+			}
+			else if (d < frame.vblankDots)
+			{
+				state.scanline = int(frame.vblankLine + d / DEBUG_LINE_DOTS);
+				state.dot = uint(d % DEBUG_LINE_DOTS);
+			}
+			else
+			{
+				state.scanline = -1;
+				state.dot = uint(d - frame.vblankDots);
+			}
+
+			state.linesPerFrame = uint(frame.vblankLine + frame.vblankDots / DEBUG_LINE_DOTS + 1);
+			state.ctrl = regs.ctrl[0];
+			state.mask = regs.ctrl[1];
+			state.status = regs.status & Regs::STATUS_BITS;
+			state.oamAddress = regs.oam;
+			state.vramAddress = scroll.address;
+			state.tempAddress = scroll.latch;
+			state.fineX = scroll.xFine;
+			state.writeToggle = scroll.toggle;
+		}
+
+		Cycle Ppu::GetDebugNextScanlineCycles() const
+		{
+			const DebugFrame frame( GetDebugFrame( model, cpu.GetFrameCycles() ) );
+			const long d = long(GetLocalCycles( cpu.GetCycles() ));
+			const long lineDots = GetDebugLineDots( frame, d );
+
+			long next;
+
+			if (lineDots >= 0)
+				next = d - lineDots % DEBUG_LINE_DOTS + DEBUG_LINE_DOTS;
+			else if (d < frame.vblankDots)
+				next = (d / DEBUG_LINE_DOTS + 1) * DEBUG_LINE_DOTS;
+			else
+				next = frame.vblankDots + frame.preRenderDots;
+
+			// First clock that GetLocalCycles() maps to that dot
+			return cycles.one == PPU_RP2C02_CC ? Cycle(next) * PPU_RP2C02_CC : Cycle(next) * PPU_RP2C07_CC - (PPU_RP2C07_CC - 1);
+		}
+
 		NST_FORCE_INLINE bool Ppu::IsDead() const
 		{
 			return scanline == SCANLINE_VBLANK || !(regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED);

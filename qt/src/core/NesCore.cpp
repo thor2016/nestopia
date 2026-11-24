@@ -46,6 +46,7 @@ namespace
 
 NesCore::NesCore(void)
 	: emulator(),
+	  debuggerApi(emulator),
 	  machine(emulator),
 	  video(emulator),
 	  sound(emulator),

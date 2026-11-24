@@ -48,7 +48,7 @@ if(NESTOPIAQT_ENABLE_VULKAN)
 endif()
 
 # --------------------------------------------------------------------------
-# Nestopia core, built unmodified from the source tree.
+# Nestopia core.
 # --------------------------------------------------------------------------
 file(GLOB_RECURSE NESTOPIA_CORE_SOURCES CONFIGURE_DEPENDS "${NESTOPIA_CORE_DIR}/*.cpp")
 
@@ -89,6 +89,14 @@ set(NESTOPIAQT_SHELL_SOURCES
     src/video/ViewerSDL.h
     src/video/ViewerQWidget.cpp
     src/video/ViewerQWidget.h
+    src/debugger/Disassembler.cpp
+    src/debugger/Disassembler.h
+    src/debugger/DebuggerWindow.cpp
+    src/debugger/DebuggerWindow.h
+    src/debugger/DisassemblyView.cpp
+    src/debugger/DisassemblyView.h
+    src/debugger/DebuggerTabs.cpp
+    src/debugger/DebuggerTabs.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
 )

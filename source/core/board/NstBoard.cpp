@@ -482,6 +482,37 @@ namespace Nes
 				return (board.GetWram() ? 1 : 0) + PRG_WINDOWS + CHR_PAGES;
 			}
 
+			bool Board::PeekDebug(const uint address,uint& data) const
+			{
+				if (address >= 0x8000)
+				{
+					data = prg.Peek( address - 0x8000 );
+					return true;
+				}
+
+				if (address >= 0x6000 && board.GetWram() >= SIZE_8K && wrk.Readable(0))
+				{
+					data = wrk.Peek( address - 0x6000 );
+					return true;
+				}
+
+				return false;
+			}
+
+			long Board::GetPrgRomOffset(const uint address) const
+			{
+				if (address < 0x8000 || address > 0xFFFF)
+					return -1;
+
+				const Ram& rom = prg.Source(0);
+				const byte* const mem = &prg.Peek( address - 0x8000 );
+
+				if (rom.Mem() && mem >= rom.Mem() && mem < rom.Mem() + rom.Size())
+					return long(mem - rom.Mem());
+
+				return -1;
+			}
+
 			Board::MemoryRegion Board::GetMemoryRegion(uint index) const
 			{
 				MemoryRegion region;

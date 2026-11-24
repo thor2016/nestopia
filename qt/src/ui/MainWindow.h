@@ -17,6 +17,7 @@ class QAction;
 class QActionGroup;
 class QLabel;
 class QMenu;
+class DebuggerWindow;
 
 class MainWindow : public QMainWindow
 {
@@ -42,6 +43,7 @@ class MainWindow : public QMainWindow
 		void onFpsTimer(void);
 		void onInputConfig(void);
 		void onAbout(void);
+		void setDebuggerVisible(bool visible);
 
 	private:
 		void createMenus(void);
@@ -69,6 +71,7 @@ class MainWindow : public QMainWindow
 		EmulationThread emulation;
 		std::unique_ptr<AudioDriverBase> audio;
 		std::unique_ptr<ViewerBase> viewer;
+		DebuggerWindow *debuggerWindow;
 
 		QTimer fpsTimer;
 		quint64 framesThisSecond;
@@ -82,6 +85,7 @@ class MainWindow : public QMainWindow
 		QAction *pauseAction;
 		QAction *muteAction;
 		QAction *fullscreenAction;
+		QAction *debuggerAction;
 		QActionGroup *videoDriverGroup;
 		QActionGroup *audioDriverGroup;
 };

@@ -25,6 +25,8 @@
 #ifndef NST_CPU_H
 #define NST_CPU_H
 
+#include <vector>
+
 #include "NstAssert.hpp"
 #include "NstIoMap.hpp"
 #include "NstApu.hpp"
@@ -40,6 +42,51 @@ namespace Nes
 		public:
 
 			Cpu();
+
+			struct DebugEvent
+			{
+				enum Reason
+				{
+					EXEC_BREAKPOINT,
+					STEP_COMPLETE,
+					BREAK_REQUEST
+				};
+
+				uint address;
+				Reason reason;
+				qaword cycles;
+			};
+
+			// How execution continues after the debugger callback returns.
+			struct DebugRequest
+			{
+				enum Mode
+				{
+					RUN,
+					STEP_INTO,
+					STEP_OVER,
+					STEP_OUT,
+					RUN_TO_ADDRESS,
+					RUN_TO_CYCLE,   // monotonic master clock, see GetMonotonicCycles()
+					RUN_TO_FRAME
+				};
+
+				Mode mode;
+				uint address;
+				qaword cycle;
+			};
+
+			struct DebugRegisters
+			{
+				uint pc;
+				uint a;
+				uint x;
+				uint y;
+				uint sp;
+				uint p;
+			};
+
+			typedef void (NST_REGCALL *DebuggerCallback)(void*,const DebugEvent&,DebugRequest&);
 
 			enum
 			{
@@ -86,6 +133,23 @@ namespace Nes
 			void SetModel(CpuModel);
 			void AddHook(const Hook&);
 			void RemoveHook(const Hook&);
+			void SetDebuggerCallback(DebuggerCallback,void*);
+			void SetExecBreakpoint(uint,bool);
+			void ClearExecBreakpoints();
+			void RequestDebugBreak();
+			void GetDebugRegisters(DebugRegisters&) const;
+			void SetDebugRegisters(const DebugRegisters&);
+			uint PeekDebugRam(uint) const;
+
+			qaword GetDebugInstructionCount() const
+			{
+				return debugger.instructions;
+			}
+
+			void ResetDebugInstructionCount()
+			{
+				debugger.instructions = 0;
+			}
 
 			void SaveState(State::Saver&,dword,dword) const;
 			void LoadState(State::Loader&,dword,dword,dword);
@@ -129,6 +193,9 @@ namespace Nes
 			void Run0();
 			void Run1();
 			void Run2();
+			void RunDebug();
+			void DebugHalt(DebugEvent::Reason);
+			void ApplyDebugRequest(const DebugRequest&);
 
 			inline void ExecuteOp();
 			inline uint FetchPc8();
@@ -486,6 +553,29 @@ namespace Nes
 			Ram ram;
 			Apu apu;
 			IoMap map;
+			struct Debugger
+			{
+				enum Mode
+				{
+					MODE_RUN,
+					MODE_STOP,
+					MODE_STEP_OVER,
+					MODE_STEP_OUT,
+					MODE_RUN_TO,
+					MODE_RUN_TO_CYCLE,
+					MODE_RUN_TO_FRAME
+				};
+
+				DebuggerCallback callback;
+				void* userData;
+				std::vector<byte> execBreakpoints;
+				Mode mode;
+				DebugEvent::Reason stopReason;
+				uint address;
+				int sp; // stack pointer RUN_TO and STEP_OUT compare against, -1 for any
+				qaword cycle;
+				qaword instructions;
+			}   debugger;
 
 			bool dmaOam;
 			uint dmaOamCycle;

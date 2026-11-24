@@ -19,8 +19,10 @@
 #include <QShortcut>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QSignalBlocker>
 #include <QtDebug>
 
+#include "debugger/DebuggerWindow.h"
 #include "input/InputConfigDialog.h"
 
 #ifndef NESTOPIAQT_DATABASE_FALLBACK
@@ -35,6 +37,7 @@ namespace
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent),
+	  debuggerWindow(nullptr),
 	  framesThisSecond(0),
 	  shutDown(false),
 	  statusRom(nullptr),
@@ -44,6 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
 	  pauseAction(nullptr),
 	  muteAction(nullptr),
 	  fullscreenAction(nullptr),
+	  debuggerAction(nullptr),
 	  videoDriverGroup(nullptr),
 	  audioDriverGroup(nullptr)
 {
@@ -154,6 +158,14 @@ void MainWindow::shutdown(void)
 
 	shutDown = true;
 
+	if (debuggerWindow != nullptr && debuggerWindow->isVisible())
+	{
+		debuggerWindow->close();
+	}
+
+	delete debuggerWindow;
+	debuggerWindow = nullptr;
+
 	// No more frames, no more audio writes
 	emulation.stop();
 
@@ -245,6 +257,13 @@ void MainWindow::createMenus(void)
 
 	QAction *hardReset = emulationMenu->addAction(tr("&Power Cycle"), this, [this]() { reset(true); });
 	hardReset->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_R));
+
+	// ---- Debug
+	QMenu *debugMenu = menuBar()->addMenu(tr("&Debug"));
+	debuggerAction = addCheckable(debugMenu, tr("&Debugger"), false);
+	debuggerAction->setObjectName(QStringLiteral("debuggerAction"));
+	debuggerAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
+	connect(debuggerAction, &QAction::toggled, this, &MainWindow::setDebuggerVisible);
 
 	// ---- View
 	QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
@@ -338,6 +357,7 @@ void MainWindow::createMenus(void)
 				config.videoFilter = NesCore::VideoFilter(value);
 
 				{
+					EmulationThread::HaltGuard guard(emulation);
 					EmulationThread::Locker lock(emulation.mutex());
 					emulation.core().setVideoFilter(config.videoFilter);
 				}
@@ -415,7 +435,36 @@ void MainWindow::createMenus(void)
 	helpMenu->addAction(tr("&About"), this, &MainWindow::onAbout);
 
 	// Shortcuts of a hidden menu bar do not work, in fullscreen it is hidden
-	addActions({openAction, closeRomAction, quitAction, pauseAction, softReset, hardReset, fullscreenAction, muteAction});
+	addActions({openAction, closeRomAction, quitAction, pauseAction, softReset, hardReset, debuggerAction,
+		fullscreenAction, muteAction});
+}
+
+void MainWindow::setDebuggerVisible(bool visible)
+{
+	if (visible)
+	{
+		if (debuggerWindow == nullptr)
+		{
+			debuggerWindow = new DebuggerWindow(emulation, this);
+			connect(debuggerWindow, &DebuggerWindow::closed, this, [this]() {
+				QSignalBlocker blocker(debuggerAction);
+				debuggerAction->setChecked(false);
+			});
+		}
+
+		if (emulation.isPaused())
+		{
+			setPaused(false);
+		}
+
+		debuggerWindow->show();
+		debuggerWindow->raise();
+		debuggerWindow->activateWindow();
+	}
+	else if (debuggerWindow != nullptr && debuggerWindow->isVisible())
+	{
+		debuggerWindow->close();
+	}
 }
 
 // --------------------------------------------------------------------------
@@ -527,6 +576,7 @@ void MainWindow::setFullscreen(bool fullscreen)
 void MainWindow::stopAudio(void)
 {
 	{
+		EmulationThread::HaltGuard guard(emulation);
 		EmulationThread::Locker lock(emulation.mutex());
 		emulation.core().setAudioDriver(nullptr);
 	}
@@ -559,6 +609,7 @@ bool MainWindow::startAudio(void)
 	created->setPaused(emulation.isPaused());
 
 	{
+		EmulationThread::HaltGuard guard(emulation);
 		EmulationThread::Locker lock(emulation.mutex());
 		emulation.core().setAudioDriver(created.get());
 	}
@@ -600,8 +651,15 @@ void MainWindow::setPaused(bool paused)
 
 void MainWindow::reset(bool hard)
 {
-	EmulationThread::Locker lock(emulation.mutex());
-	emulation.core().reset(hard);
+	{
+		EmulationThread::HaltGuard guard(emulation);
+		EmulationThread::Locker lock(emulation.mutex());
+		emulation.core().reset(hard);
+	}
+	if (debuggerWindow != nullptr)
+	{
+		debuggerWindow->machineChanged();
+	}
 }
 
 bool MainWindow::openRom(const QString &path)
@@ -610,6 +668,7 @@ bool MainWindow::openRom(const QString &path)
 	bool loaded;
 
 	{
+		EmulationThread::HaltGuard guard(emulation);
 		EmulationThread::Locker lock(emulation.mutex());
 
 		loaded = emulation.core().loadRom(path, error);
@@ -651,6 +710,7 @@ void MainWindow::onOpenRom(void)
 void MainWindow::onCloseRom(void)
 {
 	{
+		EmulationThread::HaltGuard guard(emulation);
 		EmulationThread::Locker lock(emulation.mutex());
 		emulation.core().unload();
 	}
@@ -678,6 +738,10 @@ void MainWindow::updateTitle(void)
 	closeRomAction->setEnabled(loaded);
 	statusRom->setText(loaded ? rom : tr("No ROM loaded"));
 	setWindowTitle(loaded ? QStringLiteral("%1 - NestopiaQt").arg(rom) : QStringLiteral("NestopiaQt"));
+	if (debuggerWindow != nullptr)
+	{
+		debuggerWindow->machineChanged();
+	}
 }
 
 void MainWindow::updateStatus(void)

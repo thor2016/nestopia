@@ -124,9 +124,31 @@ namespace Nes
 			{
 				return available;
 			}
+
+			uint PeekDebug(uint address) const
+			{
+				return rom[address & (SIZE_8K-1)];
+			}
 		};
 
 		Fds::Bios Fds::bios;
+
+		bool Fds::PeekDebug(const uint address,uint& data) const
+		{
+			if (address >= 0xE000 && address <= 0xFFFF)
+			{
+				data = bios.PeekDebug( address );
+				return true;
+			}
+
+			if (address >= 0x6000 && address < 0xE000)
+			{
+				data = ram.mem[address - 0x6000];
+				return true;
+			}
+
+			return false;
+		}
 
 		NES_PEEK_A(Fds::Bios,Rom)
 		{

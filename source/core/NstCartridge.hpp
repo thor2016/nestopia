@@ -113,6 +113,8 @@ namespace Nes
 			ExternalDevice QueryExternalDevice(ExternalDeviceType);
 			uint NumMemoryRegions() const;
 			MemoryRegion GetMemoryRegion(uint) const;
+			bool PeekDebug(uint,uint&) const;
+			long GetPrgRomOffset(uint) const;
 
 			Boards::Board* board;
 			VsSystem* vs;

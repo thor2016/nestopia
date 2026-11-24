@@ -28,7 +28,12 @@ EmulationThread::EmulationThread(QObject *parent)
 	: QThread(parent),
 	  inputManager(nullptr),
 	  quitFlag(false),
-	  pausedFlag(false)
+	  pausedFlag(false),
+	  debuggerEnabled(false),
+	  haltedFlag(false),
+	  haltGuards(0),
+	  resumePending(false),
+	  resumeRequest{DebugRequest::RUN, 0, 0}
 {
 	setObjectName(QStringLiteral("EmulationThread"));
 }
@@ -55,6 +60,7 @@ void EmulationThread::stop(void)
 	{
 		Locker lock(&emuMutex);
 		wakeCondition.wakeAll();
+		haltCondition.wakeAll();
 	}
 
 	wait();
@@ -72,6 +78,98 @@ void EmulationThread::setPaused(bool paused)
 void EmulationThread::wake(void)
 {
 	wakeCondition.wakeAll();
+}
+
+EmulationThread::HaltGuard::HaltGuard(EmulationThread &owner)
+	: thread(owner)
+{
+	Locker lock(&thread.emuMutex);
+
+	++thread.haltGuards;
+	thread.haltCondition.wakeAll();
+
+	while (thread.haltedFlag.load())
+	{
+		thread.haltExitCondition.wait(&thread.emuMutex);
+	}
+}
+
+EmulationThread::HaltGuard::~HaltGuard(void)
+{
+	Locker lock(&thread.emuMutex);
+	--thread.haltGuards;
+}
+
+void EmulationThread::setDebuggerEnabled(bool enabled)
+{
+	HaltGuard guard(*this);
+	Locker lock(&emuMutex);
+
+	nesCore.debugger().SetCallback(enabled ? &EmulationThread::onDebuggerEvent : nullptr, this);
+	debuggerEnabled.store(enabled);
+}
+
+bool EmulationThread::resume(const DebugRequest &request)
+{
+	Locker lock(&emuMutex);
+
+	if (!haltedFlag.load())
+	{
+		return false;
+	}
+
+	resumeRequest = request;
+	resumePending = true;
+	haltCondition.wakeAll();
+	return true;
+}
+
+void EmulationThread::requestBreak(void)
+{
+	Locker lock(&emuMutex);
+	nesCore.debugger().RequestBreak();
+}
+
+void NST_CALLBACK EmulationThread::onDebuggerEvent(void *userData, const Nes::Api::Debugger::Event &event,
+	DebugRequest &request)
+{
+	static_cast<EmulationThread *>(userData)->halt(event, request);
+}
+
+bool EmulationThread::haltAllowed(void) const
+{
+	return !quitFlag.load() && haltGuards == 0;
+}
+
+// Runs on the emulation thread inside runFrame() with the mutex held
+void EmulationThread::halt(const Nes::Api::Debugger::Event &event, DebugRequest &request)
+{
+	if (!haltAllowed())
+	{
+		return;
+	}
+
+	haltedFlag.store(true);
+	resumePending = false;
+
+	emit halted(quint16(event.address), int(event.reason));
+
+	while (!resumePending && haltAllowed())
+	{
+		// Releases the emulation mutex while halted
+		haltCondition.wait(&emuMutex);
+	}
+
+	if (resumePending && haltAllowed())
+	{
+		request = resumeRequest;
+	}
+
+	resumePending = false;
+	haltedFlag.store(false);
+	haltExitCondition.wakeAll();
+
+	emit resumed();
 }
 
 bool EmulationThread::shouldRun(void) const

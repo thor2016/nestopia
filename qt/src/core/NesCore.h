@@ -8,6 +8,7 @@
 #include <QByteArray>
 
 #include "NstApiEmulator.hpp"
+#include "NstApiDebugger.hpp"
 #include "NstApiMachine.hpp"
 #include "NstApiVideo.hpp"
 #include "NstApiSound.hpp"
@@ -89,6 +90,8 @@ class NesCore
 		// Sets the NES button bits (Nes::Api::Input::Controllers::Pad) of a port
 		void setPadButtons(int port, unsigned int buttons);
 
+		Nes::Api::Debugger &debugger(void) { return debuggerApi; }
+
 		// Reads a byte of the CPU address space without advancing the machine.
 		// Intended for RAM and cartridge RAM, reads of registers with side
 		// effects are not suitable.
@@ -103,6 +106,7 @@ class NesCore
 		void applyAudioConfig(void);
 
 		Nes::Api::Emulator emulator;
+		Nes::Api::Debugger debuggerApi;
 		Nes::Api::Machine machine;
 		Nes::Api::Video video;
 		Nes::Api::Sound sound;

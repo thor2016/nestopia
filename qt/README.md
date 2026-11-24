@@ -24,11 +24,20 @@ directory.
     cmake -S qt -B build -DNESTOPIAQT_TEST_ROM=/path/to/any.nes
     cd build && ctest --output-on-failure
 
-Without a ROM both tests are skipped. `emu_smoke` runs the emulation thread against a
-fake audio device and checks pacing, the frame signal, the emulation mutex, pausing,
-audio rate matching and keyboard and (virtual) joystick input. `gui_smoke` builds the
-main window and the input dialog on the offscreen platform. Setting
-`NESTOPIAQT_TEST_AUDIO=sdl` or `qt` runs `emu_smoke` against a real audio device.
+Without a ROM the ROM-dependent tests are skipped. `emu_smoke` runs the emulation
+thread against a fake audio device and checks pacing, the frame signal, the emulation
+mutex, pausing, audio rate matching and keyboard and (virtual) joystick input.
+`debugger_smoke` runs a generated NROM program on the emulation thread with the debugger
+enabled and checks halting, every run request, memory peeks, registers, the halt guard
+and stopping while halted. With a ROM it also checks that breaking on many instructions
+and inspecting the machine leaves the emulated frames and RAM unchanged.
+`disassembler` checks the 6502 disassembler and needs no ROM. `gui_smoke` builds the main
+window and input dialog on the offscreen platform, then checks debugger breakpoint and
+bookmark edits, break/step controls, and opening and closing the debugger window.
+`debugger_widget` uses a generated program to test assembly navigation, breakpoint
+gutter interaction, register and flag edits, layout presets and saved tab placement.
+It needs no external ROM.
+Setting `NESTOPIAQT_TEST_AUDIO=sdl` or `qt` runs `emu_smoke` against a real audio device.
 
 ## Accuracy runner
 
@@ -70,6 +79,64 @@ parallel, and prints a result per ROM:
   frame into the viewer and schedules a repaint.
 * The audio FIFO has its own small lock because the audio device thread consumes it. It
   is not part of the emulation state.
+* With `setDebuggerEnabled(true)` the core runs a separate CPU loop that checks
+  breakpoints and run requests before each instruction. The normal loop is unchanged
+  while the debugger is off. A breakpoint or step halts the emulation thread inside the
+  frame: it emits `halted(address, reason)` and waits with the mutex released, so the
+  GUI can lock the mutex and inspect the machine through `NesCore::debugger()`.
+  `resume(request)` continues it and `requestBreak()` halts a running machine.
+* Code that must change the machine while it may be halted (reset, loading or closing a
+  ROM, changing the audio or video setup) first takes an `EmulationThread::HaltGuard`.
+  It lets a halted frame finish and blocks new halts until it is destroyed.
+
+## Debugger
+
+Open **Debug > Debugger** to enable the debugger run loop. The dialog follows the
+FCEUX Qt console debugger layout, with its own File, View, Debug and Options menus,
+an icon-only toolbar, and tabbed CPU, PPU, Breakpoints and Bookmarks panels. The toolbar
+and Debug menu share the same actions:
+
+| Command | Shortcut |
+|---------|----------|
+| Run | F5 |
+| Break | F6 |
+| Step Into | F11 |
+| Step Out | Shift+F11 |
+| Step Over | F10 |
+| Run to Cursor | Ctrl+F10 |
+| Run Line (next scanline) | F7 |
+| Run Frame | F8 |
+
+**View > Layout Presets** provides Compact, Compact Split, Wide and Wide Quad.
+Resize the splitters, reorder tabs, drag a tab into another visible group, or
+right-click a tab and use **Move Tab To...** to choose any of eight panel positions.
+Geometry, tab placement, splitter sizes, assembly font and display options are saved
+when the dialog closes.
+
+The assembly view scrolls through the CPU address space without snapping back on every
+refresh. A new halt follows the PC, shown with an arrow and highlighted line. Click
+the gutter to toggle an execute breakpoint. Double-click an address operand to follow
+it without executing code; use Ctrl+Left / Ctrl+Right for navigation history and
+Ctrl+G to return to the PC. Ctrl+A opens Go to Address. Arrow keys, Page Up/Down and
+the wheel scroll instructions. Drag over lines and use Ctrl+C to copy them. The context
+menu provides run-to-cursor, breakpoint, bookmark and copy commands; B and M add/toggle
+a breakpoint or bookmark at the selected address. Options controls byte-code and mapped
+PRG-offset display. Unofficial opcodes are marked with `*`.
+
+CPU registers are hexadecimal fields and status flags are checkboxes, editable only
+while halted. The PPU panel has read-only register and timing fields. Breakpoints can
+be edited, disabled without deletion, or deleted. Bookmarks have optional names;
+double-click one to navigate to it. Breakpoints currently match CPU addresses regardless
+of the mapped PRG bank; a displayed PRG offset is inspection data, not a bank constraint.
+Breakpoints and bookmarks remain session-local.
+
+Assembly memory is captured when the dialog opens, the machine halts or changes, or
+**View > Refresh Snapshot** is used. Scrolling and painting use this snapshot without
+locking or reading the running emulator. Close the dialog to disable CPU debugger checks.
+
+Memory inspection avoids I/O side effects. Addresses without a supported side-effect-free
+read are shown as unknown. `.nl` labels, conditional breakpoints and read/write
+breakpoints are not implemented yet.
 
 ## Drivers
 
@@ -89,9 +156,13 @@ RGB presets).
     src/audio    AudioDriverBase (FIFO, rate control), SDL and Qt backends
     src/input    InputManager, JoystickSystem, InputConfigDialog
     src/ui       MainWindow
+    qt/src/debugger DebuggerWindow, assembly view, tabbed panels and 6502 disassembler
     tests        smoke tests
 
 ## Not implemented yet
 
 Save states, FDS and NSF images, archives, zapper and other expansion devices, netplay,
-cheats and all debugging tools.
+cheats, `.nl` symbol loading, conditional and read/write breakpoints. The debugger window
+provides disassembly, register and PPU state, stack, execute breakpoints, bookmarks and
+run control. Its memory view currently reports PRG offsets where the core can identify
+the mapped ROM bank.

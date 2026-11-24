@@ -733,6 +733,11 @@ namespace Nes
 				virtual uint NumMemoryRegions() const;
 				virtual MemoryRegion GetMemoryRegion(uint) const;
 
+				// See Image::PeekDebug(). Boards with memory outside the standard
+				// W-RAM and PRG windows override this.
+				virtual bool PeekDebug(uint,uint&) const;
+				long GetPrgRomOffset(uint) const;
+
 			protected:
 
 				explicit Board(const Context&);

@@ -145,6 +145,15 @@ namespace Nes
 		apu   ( *this ),
 		map   ( this, &Cpu::Peek_Overflow, &Cpu::Poke_Overflow )
 		{
+			debugger.callback = nullptr;
+			debugger.userData = nullptr;
+			debugger.mode = Debugger::MODE_RUN;
+			debugger.stopReason = DebugEvent::STEP_COMPLETE;
+			debugger.address = 0;
+			debugger.sp = -1;
+			debugger.cycle = 0;
+			debugger.instructions = 0;
+
 			// Zero-filled until SetRamPowerState() says otherwise
 			ram.powerstate = 0;
 
@@ -194,6 +203,7 @@ namespace Nes
 			ticks   = 0;
 			logged  = 0;
 			busData = busDataInternal = 0;
+			debugger.mode = Debugger::MODE_RUN;
 
 			dmaOam      = false;
 			dmaOamCycle = 0;
@@ -267,6 +277,112 @@ namespace Nes
 		void Cpu::RemoveHook(const Hook& hook)
 		{
 			hooks.Remove( hook );
+		}
+
+		void Cpu::SetDebuggerCallback(const DebuggerCallback callback,void* const userData)
+		{
+			debugger.callback = callback;
+			debugger.userData = userData;
+
+			if (!callback)
+				debugger.mode = Debugger::MODE_RUN;
+		}
+
+		void Cpu::SetExecBreakpoint(const uint address,const bool enabled)
+		{
+			if (enabled)
+			{
+				if (debugger.execBreakpoints.empty())
+					debugger.execBreakpoints.resize( 0x10000, 0 );
+
+				debugger.execBreakpoints[address & 0xFFFF] = 1;
+			}
+			else if (!debugger.execBreakpoints.empty())
+			{
+				debugger.execBreakpoints[address & 0xFFFF] = 0;
+			}
+		}
+
+		void Cpu::ClearExecBreakpoints()
+		{
+			std::vector<byte>().swap( debugger.execBreakpoints );
+		}
+
+		void Cpu::RequestDebugBreak()
+		{
+			debugger.mode = Debugger::MODE_STOP;
+			debugger.stopReason = DebugEvent::BREAK_REQUEST;
+		}
+
+		void Cpu::GetDebugRegisters(DebugRegisters& regs) const
+		{
+			regs.pc = pc & 0xFFFF;
+			regs.a = a;
+			regs.x = x;
+			regs.y = y;
+			regs.sp = sp;
+			regs.p = flags.Pack();
+		}
+
+		void Cpu::SetDebugRegisters(const DebugRegisters& regs)
+		{
+			pc = regs.pc & 0xFFFF;
+			a = regs.a & 0xFF;
+			x = regs.x & 0xFF;
+			y = regs.y & 0xFF;
+			sp = regs.sp & 0xFF;
+			flags.Unpack( regs.p );
+		}
+
+		uint Cpu::PeekDebugRam(const uint address) const
+		{
+			return ram.mem[address & (RAM_SIZE-1)];
+		}
+
+		void Cpu::ApplyDebugRequest(const DebugRequest& request)
+		{
+			switch (request.mode)
+			{
+				case DebugRequest::STEP_INTO:
+
+					debugger.mode = Debugger::MODE_STOP;
+					debugger.stopReason = DebugEvent::STEP_COMPLETE;
+					break;
+
+				case DebugRequest::STEP_OVER:
+
+					debugger.mode = Debugger::MODE_STEP_OVER;
+					break;
+
+				case DebugRequest::STEP_OUT:
+
+					debugger.mode = Debugger::MODE_STEP_OUT;
+					debugger.sp = int(sp);
+					break;
+
+				case DebugRequest::RUN_TO_ADDRESS:
+
+					debugger.mode = Debugger::MODE_RUN_TO;
+					debugger.address = request.address & 0xFFFF;
+					debugger.sp = -1;
+					break;
+
+				case DebugRequest::RUN_TO_CYCLE:
+
+					debugger.mode = Debugger::MODE_RUN_TO_CYCLE;
+					debugger.cycle = request.cycle;
+					break;
+
+				case DebugRequest::RUN_TO_FRAME:
+
+					debugger.mode = Debugger::MODE_RUN_TO_FRAME;
+					break;
+
+				default:
+
+					debugger.mode = Debugger::MODE_RUN;
+					break;
+			}
 		}
 
 		bool Cpu::IsOddCycle() const
@@ -2140,7 +2256,11 @@ namespace Nes
 
 			Clock();
 
-			switch (hooks.Size())
+			if (debugger.callback)
+			{
+				RunDebug();
+			}
+			else switch (hooks.Size())
 			{
 				case 0:  Run0(); break;
 				case 1:  Run1(); break;
@@ -2282,6 +2402,136 @@ namespace Nes
 						(++hook)->Execute();
 					}
 					while (hook != last);
+				}
+				while (cycles.count < cycles.round);
+
+				Clock();
+			}
+			while (cycles.count < cycles.frame);
+		}
+
+		void Cpu::DebugHalt(const DebugEvent::Reason reason)
+		{
+			const DebugEvent event =
+			{
+				pc & 0xFFFF,
+				reason,
+				GetMonotonicCycles()
+			};
+
+			DebugRequest request = { DebugRequest::RUN, 0, 0 };
+
+			const DebuggerCallback callback = debugger.callback;
+			void* const userData = debugger.userData;
+
+			debugger.mode = Debugger::MODE_RUN;
+			callback( userData, event, request );
+
+			// A callback that detached itself no longer controls execution
+			if (debugger.callback == callback && debugger.userData == userData)
+				ApplyDebugRequest( request );
+			else if (!debugger.callback)
+				debugger.mode = Debugger::MODE_RUN;
+		}
+
+		/* Same loop as Run0/1/2 with a stop check before each instruction and
+		 * the step bookkeeping after it. It only runs while a debugger callback
+		 * is installed, so the normal loops pay nothing for it.
+		*/
+		void Cpu::RunDebug()
+		{
+			const Hook* const first = hooks.Ptr();
+			const uint hookCount = hooks.Size();
+
+			if (debugger.mode == Debugger::MODE_RUN_TO_FRAME)
+			{
+				debugger.mode = Debugger::MODE_STOP;
+				debugger.stopReason = DebugEvent::STEP_COMPLETE;
+			}
+
+			do
+			{
+				do
+				{
+					if (debugger.callback)
+					{
+						const uint address = pc & 0xFFFF;
+						bool stop;
+
+						switch (debugger.mode)
+						{
+							case Debugger::MODE_STOP:
+
+								stop = true;
+								break;
+
+							case Debugger::MODE_RUN_TO:
+
+								stop = address == debugger.address && (debugger.sp < 0 || sp == uint(debugger.sp));
+								break;
+
+							case Debugger::MODE_RUN_TO_CYCLE:
+
+								stop = GetMonotonicCycles() >= debugger.cycle;
+								break;
+
+							default:
+
+								stop = false;
+								break;
+						}
+
+						if (stop)
+						{
+							DebugHalt( debugger.mode == Debugger::MODE_STOP ? debugger.stopReason : DebugEvent::STEP_COMPLETE );
+						}
+						else if (!debugger.execBreakpoints.empty() && debugger.execBreakpoints[address])
+						{
+							DebugHalt( DebugEvent::EXEC_BREAKPOINT );
+						}
+					}
+
+					const uint startPc = pc;
+					const uint startSp = sp;
+
+					ExecuteOp();
+					++debugger.instructions;
+
+					if (debugger.mode == Debugger::MODE_STEP_OVER)
+					{
+						// Stop where control comes back to this level. For a call that is
+						// the return address, otherwise the next instruction, which also
+						// steps over an interrupt taken before it.
+						debugger.mode = Debugger::MODE_RUN_TO;
+
+						if (opcode == 0x20)
+						{
+							debugger.address = (startPc + 3) & 0xFFFF;
+							debugger.sp = int(startSp);
+						}
+						else if (opcode == 0x00)
+						{
+							debugger.address = (startPc + 2) & 0xFFFF;
+							debugger.sp = int(startSp);
+						}
+						else
+						{
+							debugger.address = pc & 0xFFFF;
+							debugger.sp = int(sp);
+						}
+					}
+					else if (debugger.mode == Debugger::MODE_STEP_OUT && (opcode == 0x60 || opcode == 0x40))
+					{
+						// Stack pointer moved above where it was when the step began
+						if (((sp - uint(debugger.sp)) & 0xFF) - 1U < 0x7FU)
+						{
+							debugger.mode = Debugger::MODE_STOP;
+							debugger.stopReason = DebugEvent::STEP_COMPLETE;
+						}
+					}
+
+					for (uint i=0; i < hookCount; ++i)
+						first[i].Execute();
 				}
 				while (cycles.count < cycles.round);
 
