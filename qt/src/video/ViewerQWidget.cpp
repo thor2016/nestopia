@@ -48,7 +48,11 @@ void ViewerQWidget::paintEvent(QPaintEvent *event)
 {
 	NESTOPIAQT_PROFILE_FUNC("Viewer QWidget paintEvent");
 
-	QPainter painter(this);
+	QPainter painter;
+	{
+		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget painter begin");
+		painter.begin(this);
+	}
 
 	const QRect target = targetRect(size());
 
@@ -65,13 +69,31 @@ void ViewerQWidget::paintEvent(QPaintEvent *event)
 	const int right = target.x() + target.width();
 	const int bottom = target.y() + target.height();
 
-	painter.fillRect(0, 0, target.x(), viewHeight, Qt::black);
-	painter.fillRect(right, 0, viewWidth - right, viewHeight, Qt::black);
-	painter.fillRect(target.x(), 0, target.width(), target.y(), Qt::black);
-	painter.fillRect(target.x(), bottom, target.width(), viewHeight - bottom, Qt::black);
+	{
+		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget fill background");
+		painter.fillRect(0, 0, target.x(), viewHeight, Qt::black);
+		painter.fillRect(right, 0, viewWidth - right, viewHeight, Qt::black);
+		painter.fillRect(target.x(), 0, target.width(), target.y(), Qt::black);
+		painter.fillRect(target.x(), bottom, target.width(), viewHeight - bottom, Qt::black);
+	}
 
 	painter.setRenderHint(QPainter::SmoothPixmapTransform, linearFilter());
-	painter.drawImage(target, frame());
+
+	if (linearFilter())
+	{
+		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget drawImage linear");
+		painter.drawImage(target, frame());
+	}
+	else
+	{
+		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget drawImage nearest");
+		painter.drawImage(target, frame());
+	}
+
+	{
+		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget painter end");
+		painter.end();
+	}
 
 	lastPaintRect = target;
 

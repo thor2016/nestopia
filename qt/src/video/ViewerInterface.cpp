@@ -84,7 +84,7 @@ void ViewerBase::setFrame(const uint32_t *pixels, int width, int height)
 
 	if (frameImage.width() != width || frameImage.height() != height)
 	{
-		frameImage = QImage(width, height, QImage::Format_RGB32);
+		frameImage = QImage(width, height, QImage::Format_ARGB32);
 		frameResized = true;
 	}
 

@@ -64,7 +64,8 @@ class ViewerBase
 		// Schedules a repaint with the latest frame
 		virtual void queueRedraw(void) = 0;
 
-		// Takes a copy of a 0x00RRGGBB frame. width is the row length in pixels.
+		// Copies a 0x00RRGGBB frame to opaque QImage::Format_ARGB32.
+		// width is the row length in pixels.
 		void setFrame(const uint32_t *pixels, int width, int height);
 		const QImage &frame(void) const { return frameImage; }
 

@@ -84,7 +84,7 @@ void ViewerGL::paintGL(void)
 
 	if (upload)
 	{
-		// QImage::Format_RGB32 is B, G, R, A in memory on little endian
+		// QImage::Format_ARGB32 is B, G, R, A in memory on little endian
 		texture->setData(QOpenGLTexture::BGRA, QOpenGLTexture::UInt8, image.constBits());
 		clearFrameChanged();
 	}
