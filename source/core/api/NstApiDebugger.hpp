@@ -25,8 +25,12 @@
 #ifndef NST_API_DEBUGGER_H
 #define NST_API_DEBUGGER_H
 
+#include <map>
+#include <memory>
+#include <string>
 #include "../NstCpu.hpp"
 #include "NstApi.hpp"
+#include "NstApiDebuggerCondition.hpp"
 
 namespace Nes
 {
@@ -140,8 +144,16 @@ namespace Nes
 
 			/** Enables the debugger run loop, or disables it when the callback is null. */
 			void SetCallback(Callback,UserData=nullptr);
-			/** Sets or removes a CPU address execute breakpoint. */
-			Result SetExecBreakpoint(uint,bool=true) throw();
+			/**
+			* Sets or removes a CPU address execute breakpoint. With a condition, see
+			* DebuggerCondition, the breakpoint only halts when the expression is non-zero
+			* before the instruction executes. Null or blank text means unconditional.
+			* RESULT_ERR_INVALID_PARAM is returned for a bad address or condition and the
+			* previous breakpoint at the address is kept. Disabling removes the condition.
+			*/
+			Result SetExecBreakpoint(uint,bool=true,const char* condition=nullptr) throw();
+			/** Checks the syntax of a condition and describes the first error. Blank text is valid. */
+			static Result ValidateCondition(const char*,std::string* error=nullptr);
 			/** Removes all execute breakpoints. */
 			void ClearExecBreakpoints();
 			/** Stops before the next instruction executed while a callback is installed. */
@@ -170,9 +182,12 @@ namespace Nes
 		private:
 
 			static void NST_REGCALL Dispatch(void*,const Core::Cpu::DebugEvent&,Core::Cpu::DebugRequest&);
+			static bool NST_REGCALL EvaluateCondition(void*,uint);
+			static int PeekThunk(void*,unsigned);
 
 			Callback callback;
 			UserData userData;
+			std::map<uint,std::shared_ptr<DebuggerCondition> > conditions;
 		};
 	}
 }

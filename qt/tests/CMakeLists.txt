@@ -22,6 +22,10 @@ add_executable(disassembler_test disassembler_test.cpp)
 target_link_libraries(disassembler_test PRIVATE nestux_shell)
 add_test(NAME disassembler COMMAND disassembler_test)
 
+add_executable(debugger_condition_test debugger_condition_test.cpp)
+target_link_libraries(debugger_condition_test PRIVATE nestux_shell)
+add_test(NAME debugger_condition COMMAND debugger_condition_test)
+
 add_executable(debugger_widget_test debugger_widget_test.cpp)
 target_link_libraries(debugger_widget_test PRIVATE nestux_shell)
 add_test(NAME debugger_widget COMMAND debugger_widget_test)

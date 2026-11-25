@@ -60,12 +60,13 @@ class DebuggerWindow : public QDialog
 		void addBreakpoint(void);
 		void editBreakpoint(void);
 		void setBreakpoint(uint address, bool enabled);
+		void openBreakpointDialog(uint address, bool editing);
+		Nes::Result applyBreakpoint(uint address, bool enabled, const QString &condition);
 		void removeBreakpoint(void);
 		void addBookmark(void);
 		void addBookmarkAt(uint address);
 		void removeBookmark(void);
 		void onBreakpointChanged(QTableWidgetItem *item);
-		bool parseAddress(uint &address) const;
 		void setStatus(const QString &message);
 		void updateBreakpoints(void);
 		void updateBookmarks(void);
@@ -81,7 +82,6 @@ class DebuggerWindow : public QDialog
 		QList<QAction *> haltActions;
 		QAction *breakAction;
 		DisassemblyView *disassembly;
-		QLineEdit *addressEdit;
 		QTableWidget *breakpointTable;
 		QListWidget *bookmarkList;
 		QPlainTextEdit *stackText;
@@ -93,6 +93,7 @@ class DebuggerWindow : public QDialog
 		QLabel *statusLabel;
 		QLabel *messageLabel;
 		QMap<uint, bool> breakpoints;
+		QMap<uint, QString> conditions;
 		QMap<uint, QString> bookmarks;
 		bool updating = false;
 		bool snapshotDirty = true;

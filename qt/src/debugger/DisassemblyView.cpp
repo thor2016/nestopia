@@ -81,9 +81,10 @@ void DisassemblyView::clear(void)
 	viewport()->update();
 }
 
-void DisassemblyView::setBreakpoints(const QMap<uint, bool> &value)
+void DisassemblyView::setBreakpoints(const QMap<uint, bool> &value, const QSet<uint> &conditional)
 {
 	breakpoints = value;
+	conditionalBreakpoints = conditional;
 	viewport()->update();
 }
 
@@ -323,8 +324,10 @@ void DisassemblyView::paintEvent(QPaintEvent *)
 		}
 		if (breakpoints.contains(instruction.address))
 		{
-			painter.setPen(QColor(185, 35, 40));
-			painter.setBrush(breakpoints.value(instruction.address) ? QBrush(QColor(215, 50, 50)) : Qt::NoBrush);
+			const bool conditional = conditionalBreakpoints.contains(instruction.address);
+			painter.setPen(conditional ? QColor(190, 120, 0) : QColor(185, 35, 40));
+			painter.setBrush(breakpoints.value(instruction.address) ?
+				QBrush(conditional ? QColor(235, 160, 20) : QColor(215, 50, 50)) : Qt::NoBrush);
 			painter.drawEllipse(QRect(cw / 2, top + 3, cw, std::max(4, lh - 6)));
 		}
 		if (instruction.address == pc)
@@ -540,6 +543,7 @@ void DisassemblyView::contextMenuEvent(QContextMenuEvent *event)
 		menu.addAction(tr("Go to $%1").arg(hex(address, 4)), this, [this, address]() { goToAddress(uint16_t(address)); });
 	}
 	menu.addAction(tr("Toggle &Breakpoint"), this, [this, address]() { emit breakpointRequested(address); });
+	menu.addAction(tr("Breakpoint Pro&perties..."), this, [this, address]() { emit breakpointDialogRequested(address); });
 	menu.addAction(tr("Add Book&mark"), this, [this, address]() { emit bookmarkRequested(address); });
 	menu.addSeparator();
 	menu.addAction(tr("&Copy"), this, &DisassemblyView::copySelection);

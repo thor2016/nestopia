@@ -87,6 +87,7 @@ namespace Nes
 			};
 
 			typedef void (NST_REGCALL *DebuggerCallback)(void*,const DebugEvent&,DebugRequest&);
+			typedef bool (NST_REGCALL *DebuggerCondition)(void*,uint);
 
 			enum
 			{
@@ -133,8 +134,9 @@ namespace Nes
 			void SetModel(CpuModel);
 			void AddHook(const Hook&);
 			void RemoveHook(const Hook&);
-			void SetDebuggerCallback(DebuggerCallback,void*);
-			void SetExecBreakpoint(uint,bool);
+			void SetDebuggerCallback(DebuggerCallback,void*,DebuggerCondition=nullptr);
+			// A conditional breakpoint only halts when the condition callback returns true
+			void SetExecBreakpoint(uint,bool,bool=false);
 			void ClearExecBreakpoints();
 			void RequestDebugBreak();
 			void GetDebugRegisters(DebugRegisters&) const;
@@ -567,8 +569,9 @@ namespace Nes
 				};
 
 				DebuggerCallback callback;
+				DebuggerCondition condition;
 				void* userData;
-				std::vector<byte> execBreakpoints;
+				std::vector<byte> execBreakpoints; // 0 none, 1 always, 2 when the condition callback agrees
 				Mode mode;
 				DebugEvent::Reason stopReason;
 				uint address;

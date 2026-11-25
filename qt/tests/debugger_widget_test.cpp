@@ -7,6 +7,8 @@
 #include <QCheckBox>
 #include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QLabel>
@@ -80,6 +82,20 @@ namespace
 		QApplication::sendEvent(view->viewport(), &event);
 	}
 
+	// Runs action on the next modal dialog while the code that opens it blocks in exec()
+	void onModalDialog(std::function<void(QDialog *)> action)
+	{
+		auto *timer = new QTimer(qApp);
+		QObject::connect(timer, &QTimer::timeout, timer, [timer, action]() {
+			auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+			if (dialog == nullptr) return;
+			timer->stop();
+			timer->deleteLater();
+			action(dialog);
+		});
+		timer->start(5);
+	}
+
 	void key(DisassemblyView *view, int value, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
 	{
 		QKeyEvent event(QEvent::KeyPress, value, modifiers);
@@ -142,12 +158,22 @@ int main(int argc, char **argv)
 			}
 			check(visible == preset && pages.size() == 4, "layout preset preserves each panel exactly once");
 		}
-		auto *address = window.findChild<QLineEdit *>(QStringLiteral("debuggerAddress"));
 		auto *add = window.findChild<QPushButton *>(QStringLiteral("debuggerAddBreakpoint"));
 		auto *breakpoints = window.findChild<QTableWidget *>(QStringLiteral("debuggerBreakpoints"));
-		address->setText(QStringLiteral("$8004"));
+		const QString selected = QStringLiteral("$%1").arg(view->selectedAddress(), 4, 16, QLatin1Char('0')).toUpper();
+		QString prefilled;
+		onModalDialog([&](QDialog *dialog) {
+			auto *address = dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogAddress"));
+			prefilled = address->text();
+			check(dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogCondition"))->text().isEmpty(),
+				"new breakpoint dialog has no condition");
+			address->setText(QStringLiteral("$8004"));
+			dialog->accept();
+		});
 		add->click();
+		check(prefilled == selected, "Add prefills the selected assembly address");
 		check(breakpoints->rowCount() == 1, "breakpoint is added before execution");
+		check(breakpoints->item(0, 2)->text().isEmpty(), "unconditional breakpoint shows no condition");
 		thread.start();
 		if (!waitUntil([&]() { return halts == 1; }))
 		{
@@ -207,6 +233,47 @@ int main(int argc, char **argv)
 			"stepping commits a focused register edit before executing");
 		view->goToAddress(0x2000);
 		check(view->selectedText().contains(QStringLiteral("???")), "unreadable I/O remains unknown");
+		view->goToPC();
+
+		onModalDialog([&](QDialog *dialog) {
+			auto *address = dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogAddress"));
+			auto *condition = dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogCondition"));
+			auto *ok = dialog->findChild<QDialogButtonBox *>(QStringLiteral("breakpointDialogButtons"))->button(QDialogButtonBox::Ok);
+			check(address->text() == QStringLiteral("$8012"), "context menu prefills the clicked address");
+			condition->setText(QStringLiteral("A =="));
+			check(!ok->isEnabled(), "incomplete condition is rejected by the dialog");
+			condition->setText(QStringLiteral("A == $99"));
+			address->setText(QStringLiteral("$8004"));
+			check(!ok->isEnabled(), "dialog refuses an address that already has a breakpoint");
+			address->setText(QStringLiteral("$8012"));
+			check(ok->isEnabled(), "valid address and condition are accepted");
+			dialog->accept();
+		});
+		emit view->breakpointDialogRequested(0x8012);
+		check(breakpoints->rowCount() == 2 && breakpoints->item(1, 0)->text() == QStringLiteral("$8012") &&
+			breakpoints->item(1, 2)->text() == QStringLiteral("A == $99"), "conditional breakpoint is listed with its condition");
+		window.findChild<QAction *>(QStringLiteral("debuggerRunAction"))->trigger();
+		QElapsedTimer quiet;
+		quiet.start();
+		while (quiet.elapsed() < 300) QApplication::processEvents();
+		check(halts == 2, "false condition does not halt");
+		auto *breakAction = window.findChild<QAction *>(QStringLiteral("debuggerBreakAction"));
+		check(waitUntil([&]() { return breakAction->isEnabled(); }), "running program enables Break");
+		breakAction->trigger();
+		check(waitUntil([&]() { return halts == 3; }), "break request halts the running program");
+		breakpoints->selectRow(1);
+		onModalDialog([&](QDialog *dialog) {
+			auto *address = dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogAddress"));
+			auto *condition = dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogCondition"));
+			check(address->text() == QStringLiteral("$8012") && condition->text() == QStringLiteral("A == $99"),
+				"Edit prefills the stored breakpoint");
+			condition->setText(QStringLiteral("A == 1 && [$0010] == [$0010]"));
+			dialog->accept();
+		});
+		window.findChild<QPushButton *>(QStringLiteral("debuggerEditBreakpoint"))->click();
+		check(breakpoints->item(1, 2)->text() == QStringLiteral("A == 1 && [$0010] == [$0010]"), "edit changes the condition");
+		window.findChild<QAction *>(QStringLiteral("debuggerRunAction"))->trigger();
+		check(waitUntil([&]() { return halts == 4; }) && registers(thread).pc == 0x8012, "true condition halts at the breakpoint");
 		view->goToPC();
 
 		auto *source = window.findChild<DebuggerTabs *>(QStringLiteral("debuggerTabs00"));

@@ -119,8 +119,8 @@ the gutter to toggle an execute breakpoint. Double-click an address operand to f
 it without executing code; use Ctrl+Left / Ctrl+Right for navigation history and
 Ctrl+G to return to the PC. Ctrl+A opens Go to Address. Arrow keys, Page Up/Down and
 the wheel scroll instructions. Drag over lines and use Ctrl+C to copy them. The context
-menu provides run-to-cursor, breakpoint, bookmark and copy commands; B and M add/toggle
-a breakpoint or bookmark at the selected address. Options controls byte-code and mapped
+menu provides run-to-cursor, breakpoint, breakpoint properties, bookmark and copy
+commands; B and M add/toggle a breakpoint or bookmark at the selected address. Options controls byte-code and mapped
 PRG-offset display. Unofficial opcodes are marked with `*`.
 
 CPU registers are hexadecimal fields and status flags are checkboxes, editable only
@@ -130,13 +130,27 @@ double-click one to navigate to it. Breakpoints currently match CPU addresses re
 of the mapped PRG bank; a displayed PRG offset is inspection data, not a bank constraint.
 Breakpoints and bookmarks remain session-local.
 
+Add, Edit (or a double-click on a row) and the context menu command Breakpoint Properties
+open a dialog with the CPU address, an optional condition and the enabled state. Add
+prefills the selected assembly address, the context menu the address of the clicked line
+and Edit the stored values. A breakpoint with a condition only halts when the expression
+is non-zero before the instruction at the address runs, and is drawn in orange in the
+gutter. The dialog rejects a syntax error and shows its column. Expressions use C
+operators (`||  &&  |  ^  &  ==  !=  <  <=  >  >=  <<  >>  +  -  *  /  %`, unary `! ~ -`
+and parentheses) on signed 64 bit integers, where division by zero gives 0. Numbers are
+decimal, `$hex` or `0xhex`. `A X Y S P PC` read the registers, `[addr]` reads a byte and
+`word[addr]` a little endian 16 bit value without side effects, and gives 0 where the
+address cannot be read. Names are case insensitive, for example
+`A == $10 && [$0010] != 0`. The same is available from the core API as the third
+argument of `Debugger::SetExecBreakpoint`.
+
 Assembly memory is captured when the dialog opens, the machine halts or changes, or
 **View > Refresh Snapshot** is used. Scrolling and painting use this snapshot without
 locking or reading the running emulator. Close the dialog to disable CPU debugger checks.
 
 Memory inspection avoids I/O side effects. Addresses without a supported side-effect-free
-read are shown as unknown. `.nl` labels, conditional breakpoints and read/write
-breakpoints are not implemented yet.
+read are shown as unknown. `.nl` labels and read/write breakpoints are not
+implemented yet.
 
 ## Drivers
 
@@ -186,7 +200,7 @@ captures can still be viewed.
 ## Not implemented yet
 
 Save states, FDS and NSF images, archives, zapper and other expansion devices, netplay,
-cheats, `.nl` symbol loading, conditional and read/write breakpoints. The debugger window
-provides disassembly, register and PPU state, stack, execute breakpoints, bookmarks and
+cheats, `.nl` symbol loading and read/write breakpoints. The debugger window
+provides disassembly, register and PPU state, stack, execute and conditional breakpoints, bookmarks and
 run control. Its memory view currently reports PRG offsets where the core can identify
 the mapped ROM bank.

@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QAction>
+#include <QDialog>
 #include <QElapsedTimer>
 #include <QLabel>
 #include <QLineEdit>
@@ -99,14 +100,13 @@ int main(int argc, char *argv[])
 	auto *status = debuggerWindow->findChild<QLabel *>(QStringLiteral("debuggerStatus"));
 	auto *breakAction = debuggerWindow->findChild<QAction *>(QStringLiteral("debuggerBreakAction"));
 	auto *stepAction = debuggerWindow->findChild<QAction *>(QStringLiteral("debuggerStepAction"));
-	auto *address = debuggerWindow->findChild<QLineEdit *>(QStringLiteral("debuggerAddress"));
 	auto *addBreakpoint = debuggerWindow->findChild<QPushButton *>(QStringLiteral("debuggerAddBreakpoint"));
 	auto *removeBreakpoint = debuggerWindow->findChild<QPushButton *>(QStringLiteral("debuggerRemoveBreakpoint"));
 	auto *breakpoints = debuggerWindow->findChild<QTableWidget *>(QStringLiteral("debuggerBreakpoints"));
 	auto *addBookmark = debuggerWindow->findChild<QPushButton *>(QStringLiteral("debuggerAddBookmark"));
 	auto *bookmarks = debuggerWindow->findChild<QListWidget *>(QStringLiteral("debuggerBookmarks"));
 
-	if (status == nullptr || breakAction == nullptr || stepAction == nullptr || address == nullptr ||
+	if (status == nullptr || breakAction == nullptr || stepAction == nullptr ||
 		addBreakpoint == nullptr || removeBreakpoint == nullptr || breakpoints == nullptr ||
 		addBookmark == nullptr || bookmarks == nullptr)
 	{
@@ -114,7 +114,15 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	address->setText(QStringLiteral("5000"));
+	QTimer::singleShot(100, []() {
+		auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+		if (dialog == nullptr)
+		{
+			return;
+		}
+		dialog->findChild<QLineEdit *>(QStringLiteral("breakpointDialogAddress"))->setText(QStringLiteral("5000"));
+		dialog->accept();
+	});
 	addBreakpoint->click();
 
 	if (breakpoints->rowCount() != 1)

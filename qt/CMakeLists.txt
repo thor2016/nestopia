@@ -92,6 +92,8 @@ set(NESTUX_SHELL_SOURCES
     src/video/ViewerQWidget.h
     src/debugger/Disassembler.cpp
     src/debugger/Disassembler.h
+    src/debugger/BreakpointDialog.cpp
+    src/debugger/BreakpointDialog.h
     src/debugger/DebuggerWindow.cpp
     src/debugger/DebuggerWindow.h
     src/debugger/DisassemblyView.cpp

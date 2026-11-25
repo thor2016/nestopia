@@ -4,6 +4,7 @@
 
 #include <QAbstractScrollArea>
 #include <QMap>
+#include <QSet>
 #include <QVector>
 
 #include "debugger/Disassembler.h"
@@ -22,7 +23,7 @@ class DisassemblyView : public QAbstractScrollArea
 		explicit DisassemblyView(QWidget *parent = nullptr);
 		void setSnapshot(const Snapshot &snapshot, uint16_t pc, bool followPC);
 		void clear(void);
-		void setBreakpoints(const QMap<uint, bool> &breakpoints);
+		void setBreakpoints(const QMap<uint, bool> &breakpoints, const QSet<uint> &conditional = QSet<uint>());
 		void goToAddress(uint16_t address);
 		void goToPC(void);
 		void navigateBack(void);
@@ -36,6 +37,7 @@ class DisassemblyView : public QAbstractScrollArea
 
 	signals:
 		void breakpointRequested(uint address);
+		void breakpointDialogRequested(uint address);
 		void bookmarkRequested(uint address);
 		void runToRequested(uint address);
 
@@ -66,6 +68,7 @@ class DisassemblyView : public QAbstractScrollArea
 
 		Snapshot snapshot;
 		QMap<uint, bool> breakpoints;
+		QSet<uint> conditionalBreakpoints;
 		QMap<int, int> predecessors;
 		QVector<Disassembler::Instruction> lines;
 		QVector<uint16_t> backHistory;

@@ -146,6 +146,7 @@ namespace Nes
 		map   ( this, &Cpu::Peek_Overflow, &Cpu::Poke_Overflow )
 		{
 			debugger.callback = nullptr;
+			debugger.condition = nullptr;
 			debugger.userData = nullptr;
 			debugger.mode = Debugger::MODE_RUN;
 			debugger.stopReason = DebugEvent::STEP_COMPLETE;
@@ -279,23 +280,24 @@ namespace Nes
 			hooks.Remove( hook );
 		}
 
-		void Cpu::SetDebuggerCallback(const DebuggerCallback callback,void* const userData)
+		void Cpu::SetDebuggerCallback(const DebuggerCallback callback,void* const userData,const DebuggerCondition condition)
 		{
 			debugger.callback = callback;
+			debugger.condition = condition;
 			debugger.userData = userData;
 
 			if (!callback)
 				debugger.mode = Debugger::MODE_RUN;
 		}
 
-		void Cpu::SetExecBreakpoint(const uint address,const bool enabled)
+		void Cpu::SetExecBreakpoint(const uint address,const bool enabled,const bool conditional)
 		{
 			if (enabled)
 			{
 				if (debugger.execBreakpoints.empty())
 					debugger.execBreakpoints.resize( 0x10000, 0 );
 
-				debugger.execBreakpoints[address & 0xFFFF] = 1;
+				debugger.execBreakpoints[address & 0xFFFF] = conditional ? 2 : 1;
 			}
 			else if (!debugger.execBreakpoints.empty())
 			{
@@ -2487,7 +2489,8 @@ namespace Nes
 						}
 						else if (!debugger.execBreakpoints.empty() && debugger.execBreakpoints[address])
 						{
-							DebugHalt( DebugEvent::EXEC_BREAKPOINT );
+							if (debugger.execBreakpoints[address] == 1 || (debugger.condition && debugger.condition( debugger.userData, address )))
+								DebugHalt( DebugEvent::EXEC_BREAKPOINT );
 						}
 					}
 

@@ -32,6 +32,7 @@
 #include <QToolBar>
 #include <QVBoxLayout>
 
+#include "debugger/BreakpointDialog.h"
 #include "debugger/DebuggerTabs.h"
 #include "debugger/DisassemblyView.h"
 
@@ -45,27 +46,6 @@ namespace
 	QString addressText(uint address)
 	{
 		return QLatin1Char('$') + hex(address, 4);
-	}
-
-	bool parseHexAddress(QString text, uint &address)
-	{
-		text = text.trimmed();
-		if (text.startsWith(QLatin1Char('$')))
-		{
-			text.remove(0, 1);
-		}
-		else if (text.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive))
-		{
-			text.remove(0, 2);
-		}
-		const QRegularExpression pattern(QStringLiteral("^[0-9a-fA-F]{1,4}$"));
-		if (!pattern.match(text).hasMatch())
-		{
-			return false;
-		}
-		bool ok = false;
-		address = text.toUInt(&ok, 16);
-		return ok;
 	}
 
 	enum class Glyph { GoTo, Run, Pause, Into, Out, Over, Cursor, Scanline, Frame, Reset };
@@ -177,7 +157,6 @@ DebuggerWindow::DebuggerWindow(EmulationThread &thread, QWidget *parent)
 	  toolbar(new QToolBar(this)),
 	  horizontal(new QSplitter(Qt::Horizontal, this)),
 	  disassembly(new DisassemblyView(this)),
-	  addressEdit(new QLineEdit(this)),
 	  breakpointTable(new QTableWidget(this)),
 	  bookmarkList(new QListWidget(this)),
 	  stackText(new QPlainTextEdit(this)),
@@ -223,6 +202,9 @@ DebuggerWindow::DebuggerWindow(EmulationThread &thread, QWidget *parent)
 	layout->addWidget(messageLabel);
 	connect(disassembly, &DisassemblyView::breakpointRequested, this, [this](uint address) {
 		setBreakpoint(address, !breakpoints.value(address, false));
+	});
+	connect(disassembly, &DisassemblyView::breakpointDialogRequested, this, [this](uint address) {
+		openBreakpointDialog(address, breakpoints.contains(address));
 	});
 	connect(disassembly, &DisassemblyView::bookmarkRequested, this, &DebuggerWindow::addBookmarkAt);
 	connect(disassembly, &DisassemblyView::runToRequested, this, &DebuggerWindow::runToAddress);
@@ -444,8 +426,8 @@ void DebuggerWindow::buildPanels(void)
 
 	auto *bpLayout = new QVBoxLayout(panels[2]);
 	breakpointTable->setObjectName(QStringLiteral("debuggerBreakpoints"));
-	breakpointTable->setColumnCount(3);
-	breakpointTable->setHorizontalHeaderLabels({tr("CPU Address"), tr("Type"), tr("Mapped PRG Offset")});
+	breakpointTable->setColumnCount(4);
+	breakpointTable->setHorizontalHeaderLabels({tr("CPU Address"), tr("Type"), tr("Condition"), tr("Mapped PRG Offset")});
 	breakpointTable->setFont(fixed);
 	breakpointTable->verticalHeader()->hide();
 	breakpointTable->setShowGrid(false);
@@ -456,10 +438,6 @@ void DebuggerWindow::buildPanels(void)
 	breakpointTable->horizontalHeader()->setStretchLastSection(true);
 	bpLayout->addWidget(breakpointTable, 1);
 	auto *bpButtons = new QHBoxLayout;
-	addressEdit->setObjectName(QStringLiteral("debuggerAddress"));
-	addressEdit->setPlaceholderText(tr("CPU address ($8000)"));
-	addressEdit->setMaximumWidth(170);
-	bpButtons->addWidget(addressEdit);
 	auto *add = new QPushButton(tr("Add"), panels[2]);
 	add->setObjectName(QStringLiteral("debuggerAddBreakpoint"));
 	auto *edit = new QPushButton(tr("Edit"), panels[2]);
@@ -477,6 +455,7 @@ void DebuggerWindow::buildPanels(void)
 	connect(remove, &QPushButton::clicked, this, &DebuggerWindow::removeBreakpoint);
 	connect(breakpointTable, &QTableWidget::itemChanged, this, &DebuggerWindow::onBreakpointChanged);
 	connect(breakpointTable, &QTableWidget::cellDoubleClicked, this, [this](int, int) { editBreakpoint(); });
+	breakpointTable->setToolTip(tr("Double-click a row to edit the address and condition"));
 
 	auto *bmLayout = new QVBoxLayout(panels[3]);
 	bookmarkList->setObjectName(QStringLiteral("debuggerBookmarks"));
@@ -766,7 +745,7 @@ void DebuggerWindow::refresh(void)
 			{
 				const uint address = breakpointTable->item(row, 0)->data(Qt::UserRole).toUInt();
 				const long offset = debugger.GetPrgRomOffset(address);
-				breakpointTable->item(row, 2)->setText(offset < 0 ? QStringLiteral("--") : hex(qulonglong(offset), 6));
+				breakpointTable->item(row, 3)->setText(offset < 0 ? QStringLiteral("--") : hex(qulonglong(offset), 6));
 			}
 		}
 	}
@@ -896,7 +875,7 @@ void DebuggerWindow::goToAddress(void)
 	{
 		return;
 	}
-	if (!parseHexAddress(text, address))
+	if (!BreakpointDialog::parseAddress(text, address))
 	{
 		setStatus(tr("Enter a hexadecimal CPU address from $0000 to $FFFF"));
 		return;
@@ -985,35 +964,78 @@ void DebuggerWindow::applyFlag(int bit, bool checked)
 	refresh();
 }
 
-bool DebuggerWindow::parseAddress(uint &address) const
+Nes::Result DebuggerWindow::applyBreakpoint(uint address, bool enabled, const QString &condition)
 {
-	return parseHexAddress(addressEdit->text(), address);
+	const QByteArray text = condition.toUtf8();
+	EmulationThread::Locker lock(emulation.mutex());
+	return emulation.core().debugger().SetExecBreakpoint(address, enabled, text.constData());
 }
 
 void DebuggerWindow::addBreakpoint(void)
 {
-	uint address = 0;
-	if (!parseAddress(address))
-	{
-		setStatus(tr("Enter a hexadecimal CPU address from $0000 to $FFFF"));
-		return;
-	}
-	setBreakpoint(address, true);
+	openBreakpointDialog(disassembly->selectedAddress(), false);
 }
 
 void DebuggerWindow::setBreakpoint(uint address, bool enabled)
 {
-	Nes::Result result;
-	{
-		EmulationThread::Locker lock(emulation.mutex());
-		result = emulation.core().debugger().SetExecBreakpoint(address, enabled);
-	}
-	if (result != Nes::RESULT_OK)
+	if (applyBreakpoint(address, enabled, conditions.value(address)) != Nes::RESULT_OK)
 	{
 		setStatus(tr("The core rejected breakpoint %1").arg(addressText(address)));
 		return;
 	}
 	breakpoints[address] = enabled;
+	updateBreakpoints();
+}
+
+// editing selects between changing the breakpoint at address and adding one prefilled with it
+void DebuggerWindow::openBreakpointDialog(uint address, bool editing)
+{
+	BreakpointDialog::Values initial;
+	initial.address = address;
+	QSet<uint> occupied;
+	for (auto it = breakpoints.cbegin(); it != breakpoints.cend(); ++it)
+	{
+		if (editing && it.key() == address)
+		{
+			initial.enabled = it.value();
+			initial.condition = conditions.value(address);
+		}
+		else
+		{
+			occupied.insert(it.key());
+		}
+	}
+	BreakpointDialog dialog(initial, editing, occupied, this);
+	if (dialog.exec() != QDialog::Accepted)
+	{
+		return;
+	}
+	const BreakpointDialog::Values values = dialog.values();
+	Nes::Result result = applyBreakpoint(values.address, values.enabled, values.condition);
+	const bool moved = editing && values.address != address;
+	if (result == Nes::RESULT_OK && moved)
+	{
+		result = applyBreakpoint(address, false, QString());
+	}
+	if (result != Nes::RESULT_OK)
+	{
+		setStatus(tr("Unable to set the execute breakpoint"));
+		return;
+	}
+	if (moved)
+	{
+		breakpoints.remove(address);
+		conditions.remove(address);
+	}
+	breakpoints[values.address] = values.enabled;
+	if (values.condition.isEmpty())
+	{
+		conditions.remove(values.address);
+	}
+	else
+	{
+		conditions[values.address] = values.condition;
+	}
 	updateBreakpoints();
 }
 
@@ -1025,48 +1047,7 @@ void DebuggerWindow::editBreakpoint(void)
 		setStatus(tr("Select a breakpoint to edit"));
 		return;
 	}
-	const uint old = breakpointTable->item(row, 0)->data(Qt::UserRole).toUInt();
-	bool ok = false;
-	const QString text = QInputDialog::getText(this, tr("Edit Execute Breakpoint"), tr("Hexadecimal CPU address:"),
-		QLineEdit::Normal, addressText(old), &ok);
-	if (!ok)
-	{
-		return;
-	}
-	uint address;
-	if (!parseHexAddress(text, address))
-	{
-		setStatus(tr("Invalid CPU address"));
-		return;
-	}
-	if (address == old)
-	{
-		return;
-	}
-	if (breakpoints.contains(address))
-	{
-		setStatus(tr("A breakpoint already exists at that address"));
-		return;
-	}
-	const bool enabled = breakpoints.value(old);
-	Nes::Result result;
-	{
-		EmulationThread::Locker lock(emulation.mutex());
-		auto &debugger = emulation.core().debugger();
-		result = debugger.SetExecBreakpoint(address, enabled);
-		if (result == Nes::RESULT_OK)
-		{
-			result = debugger.SetExecBreakpoint(old, false);
-		}
-	}
-	if (result != Nes::RESULT_OK)
-	{
-		setStatus(tr("Unable to edit the execute breakpoint"));
-		return;
-	}
-	breakpoints.remove(old);
-	breakpoints[address] = enabled;
-	updateBreakpoints();
+	openBreakpointDialog(breakpointTable->item(row, 0)->data(Qt::UserRole).toUInt(), true);
 }
 
 void DebuggerWindow::removeBreakpoint(void)
@@ -1078,17 +1059,13 @@ void DebuggerWindow::removeBreakpoint(void)
 		return;
 	}
 	const uint address = breakpointTable->item(row, 0)->data(Qt::UserRole).toUInt();
-	Nes::Result result;
-	{
-		EmulationThread::Locker lock(emulation.mutex());
-		result = emulation.core().debugger().SetExecBreakpoint(address, false);
-	}
-	if (result != Nes::RESULT_OK)
+	if (applyBreakpoint(address, false, QString()) != Nes::RESULT_OK)
 	{
 		setStatus(tr("Unable to delete the execute breakpoint"));
 		return;
 	}
 	breakpoints.remove(address);
+	conditions.remove(address);
 	updateBreakpoints();
 }
 
@@ -1100,12 +1077,7 @@ void DebuggerWindow::onBreakpointChanged(QTableWidgetItem *item)
 	}
 	const uint address = item->data(Qt::UserRole).toUInt();
 	const bool enabled = item->checkState() == Qt::Checked;
-	Nes::Result result;
-	{
-		EmulationThread::Locker lock(emulation.mutex());
-		result = emulation.core().debugger().SetExecBreakpoint(address, enabled);
-	}
-	if (result != Nes::RESULT_OK)
+	if (applyBreakpoint(address, enabled, conditions.value(address)) != Nes::RESULT_OK)
 	{
 		QSignalBlocker blocker(breakpointTable);
 		item->setCheckState(breakpoints.value(address) ? Qt::Checked : Qt::Unchecked);
@@ -1113,7 +1085,7 @@ void DebuggerWindow::onBreakpointChanged(QTableWidgetItem *item)
 		return;
 	}
 	breakpoints[address] = enabled;
-	disassembly->setBreakpoints(breakpoints);
+	disassembly->setBreakpoints(breakpoints, QSet<uint>(conditions.keyBegin(), conditions.keyEnd()));
 }
 
 void DebuggerWindow::updateBreakpoints(void)
@@ -1131,13 +1103,14 @@ void DebuggerWindow::updateBreakpoints(void)
 		item->setCheckState(it.value() ? Qt::Checked : Qt::Unchecked);
 		breakpointTable->setItem(index, 0, item);
 		breakpointTable->setItem(index, 1, tableItem(tr("Execute")));
-		breakpointTable->setItem(index, 2, tableItem(QStringLiteral("--")));
+		breakpointTable->setItem(index, 2, tableItem(conditions.value(it.key())));
+		breakpointTable->setItem(index, 3, tableItem(QStringLiteral("--")));
 		if (it.key() == selected)
 		{
 			breakpointTable->selectRow(index);
 		}
 	}
-	disassembly->setBreakpoints(breakpoints);
+	disassembly->setBreakpoints(breakpoints, QSet<uint>(conditions.keyBegin(), conditions.keyEnd()));
 }
 
 void DebuggerWindow::addBookmark(void)

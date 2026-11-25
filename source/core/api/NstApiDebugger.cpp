@@ -22,6 +22,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////
 
+#include <cctype>
 #include <new>
 #include "../NstMachine.hpp"
 #include "../NstImage.hpp"
@@ -40,17 +41,64 @@ namespace Nes
 		{
 			callback = function;
 			userData = data;
-			emulator.cpu.SetDebuggerCallback( function ? &Debugger::Dispatch : nullptr, this );
+			emulator.cpu.SetDebuggerCallback( function ? &Debugger::Dispatch : nullptr, this, function ? &Debugger::EvaluateCondition : nullptr );
 		}
 
-		Result Debugger::SetExecBreakpoint(const uint address,const bool enabled) throw()
+		namespace
+		{
+			bool IsBlank(const char* text)
+			{
+				while (text && *text)
+				{
+					if (!std::isspace( static_cast<unsigned char>(*text++) ))
+						return false;
+				}
+
+				return true;
+			}
+		}
+
+		Result Debugger::ValidateCondition(const char* const condition,std::string* const error)
+		{
+			if (IsBlank( condition ))
+				return RESULT_OK;
+
+			DebuggerCondition compiled;
+			std::string message;
+
+			if (compiled.Compile( condition, message ))
+				return RESULT_OK;
+
+			if (error)
+				*error = message;
+
+			return RESULT_ERR_INVALID_PARAM;
+		}
+
+		Result Debugger::SetExecBreakpoint(const uint address,const bool enabled,const char* const condition) throw()
 		{
 			if (address > 0xFFFF)
 				return RESULT_ERR_INVALID_PARAM;
 
 			try
 			{
-				emulator.cpu.SetExecBreakpoint( address, enabled );
+				std::shared_ptr<DebuggerCondition> compiled;
+
+				if (enabled && !IsBlank( condition ))
+				{
+					std::string error;
+					compiled = std::make_shared<DebuggerCondition>();
+
+					if (!compiled->Compile( condition, error ))
+						return RESULT_ERR_INVALID_PARAM;
+				}
+
+				if (compiled)
+					conditions[address] = compiled;
+				else
+					conditions.erase( address );
+
+				emulator.cpu.SetExecBreakpoint( address, enabled, compiled != nullptr );
 			}
 			catch (const std::bad_alloc&)
 			{
@@ -62,6 +110,7 @@ namespace Nes
 
 		void Debugger::ClearExecBreakpoints()
 		{
+			conditions.clear();
 			emulator.cpu.ClearExecBreakpoints();
 		}
 
@@ -162,6 +211,26 @@ namespace Nes
 		void Debugger::ResetInstructionCount()
 		{
 			emulator.cpu.ResetDebugInstructionCount();
+		}
+
+		int Debugger::PeekThunk(void* const data,const unsigned address)
+		{
+			return static_cast<const Debugger*>(data)->Peek( address );
+		}
+
+		bool NST_REGCALL Debugger::EvaluateCondition(void* const data,const uint address)
+		{
+			const Debugger& debugger = *static_cast<Debugger*>(data);
+			const std::map<uint,std::shared_ptr<DebuggerCondition> >::const_iterator it = debugger.conditions.find( address );
+
+			if (it == debugger.conditions.end())
+				return true;
+
+			Registers registers;
+			debugger.GetRegisters( registers );
+
+			const DebuggerCondition::State state = { registers.pc, registers.a, registers.x, registers.y, registers.sp, registers.p };
+			return it->second->Evaluate( state, &Debugger::PeekThunk, data ) != 0;
 		}
 
 		void NST_REGCALL Debugger::Dispatch(void* const data,const Core::Cpu::DebugEvent& event,Core::Cpu::DebugRequest& request)

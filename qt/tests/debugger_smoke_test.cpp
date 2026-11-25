@@ -216,6 +216,33 @@ namespace
 			check(thread.core().debugger().Peek(0x0010) == ((counter + 1) & 0xFF), "loop ran once between breakpoints");
 		}
 
+		{
+			int now;
+			char condition[64];
+			{
+				EmulationThread::Locker lock(thread.mutex());
+				Debugger &debugger = thread.core().debugger();
+				now = debugger.Peek(0x0010);
+				check(debugger.SetExecBreakpoint(0x8004, true, "A ==") == Nes::RESULT_ERR_INVALID_PARAM,
+					"reject a breakpoint with a bad condition");
+				std::snprintf(condition, sizeof(condition), "[$0010] == %d", (now + 2) & 0xFF);
+				check(debugger.SetExecBreakpoint(0x8004, true, condition) == Nes::RESULT_OK, "set a conditional breakpoint");
+			}
+
+			check(resumeAndWait(thread, log, makeRequest(Request::RUN), pc, reason) &&
+				pc == 0x8004 && reason == Debugger::EXEC_BREAKPOINT, "conditional breakpoint halts");
+
+			{
+				EmulationThread::Locker lock(thread.mutex());
+				Debugger &debugger = thread.core().debugger();
+				check(debugger.Peek(0x0010) == ((now + 2) & 0xFF), "conditional breakpoint skipped the earlier hits");
+				check(debugger.SetExecBreakpoint(0x8004) == Nes::RESULT_OK, "replace it with an unconditional breakpoint");
+			}
+
+			check(resumeAndWait(thread, log, makeRequest(Request::RUN), pc, reason) &&
+				pc == 0x8004 && reason == Debugger::EXEC_BREAKPOINT, "unconditional breakpoint halts on every hit");
+		}
+
 		check(resumeAndWait(thread, log, makeRequest(Request::STEP_INTO), pc, reason) && pc == 0x8010,
 			"step into a JSR");
 		check(resumeAndWait(thread, log, makeRequest(Request::STEP_INTO), pc, reason) && pc == 0x8012,
