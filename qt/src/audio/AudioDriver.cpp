@@ -6,6 +6,7 @@
 
 #include "audio/AudioDriverQt.h"
 #include "audio/AudioDriverSDL.h"
+#include "profiler/Profiler.h"
 
 namespace
 {
@@ -141,6 +142,8 @@ void AudioDriverBase::setPaused(bool paused)
 
 void AudioDriverBase::write(const int16_t *samples, int count)
 {
+	NESTOPIAQT_PROFILE_FUNC("Audio FIFO Write");
+
 	if (!opened || count <= 0 || pausedFlag.load())
 	{
 		return;
@@ -257,6 +260,10 @@ AudioDriverBase::Stats AudioDriverBase::stats(void) const
 
 void AudioDriverBase::fillAudio(int16_t *out, int count)
 {
+	// Runs on the thread of the audio device
+	NESTOPIAQT_PROFILER_SET_THREAD_NAME("Audio Device");
+	NESTOPIAQT_PROFILE_FUNC("Audio Device Fill");
+
 	deviceStarted.store(true);
 	int copied = 0;
 

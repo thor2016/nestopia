@@ -16,6 +16,7 @@ set(CMAKE_AUTOMOC ON)
 
 option(NESTOPIAQT_ENABLE_VULKAN "Build the Vulkan video viewer when Qt and the Vulkan headers are available" ON)
 option(NESTOPIAQT_BUILD_TESTS "Build the emulation thread smoke test" ON)
+option(NESTOPIAQT_PROFILER_ENABLE "Build the profiler markers and capture tooling (near-zero cost while not capturing)" ON)
 
 set(NESTOPIA_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "Root of the Nestopia source tree")
 cmake_path(NORMAL_PATH NESTOPIA_ROOT)
@@ -97,6 +98,19 @@ set(NESTOPIAQT_SHELL_SOURCES
     src/debugger/DisassemblyView.h
     src/debugger/DebuggerTabs.cpp
     src/debugger/DebuggerTabs.h
+    src/profiler/GuiBusyProfiler.cpp
+    src/profiler/GuiBusyProfiler.h
+    src/profiler/Profiler.cpp
+    src/profiler/Profiler.h
+    src/profiler/ProfilerCapture.cpp
+    src/profiler/ProfilerCapture.h
+    src/profiler/ProfilerCaptureFile.cpp
+    src/profiler/ProfilerCaptureFile.h
+    src/profiler/ProfilerCaptureFormat.h
+    src/profiler/ProfilerDialog.cpp
+    src/profiler/ProfilerDialog.h
+    src/profiler/ProfilerViewer.cpp
+    src/profiler/ProfilerViewer.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
 )
@@ -119,6 +133,12 @@ target_link_libraries(nestopiaqt_shell PUBLIC
 if(NESTOPIAQT_HAVE_VULKAN)
     target_compile_definitions(nestopiaqt_shell PUBLIC NESTOPIAQT_HAVE_VULKAN=1)
     target_link_libraries(nestopiaqt_shell PUBLIC Vulkan::Vulkan)
+endif()
+if(NESTOPIAQT_PROFILER_ENABLE)
+    message(STATUS "Profiler: enabled")
+    target_compile_definitions(nestopiaqt_shell PUBLIC NESTOPIAQT_PROFILER_ENABLE=1)
+else()
+    message(STATUS "Profiler: disabled, captures can still be viewed")
 endif()
 target_compile_options(nestopiaqt_shell PRIVATE -Wall -Wextra)
 target_compile_definitions(nestopiaqt_shell PRIVATE NESTOPIAQT_DATABASE_FALLBACK="${NESTOPIA_ROOT}/NstDatabase.xml")

@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <QMainWindow>
+#include <QPointer>
 #include <QSettings>
 #include <QTimer>
 
@@ -18,6 +19,7 @@ class QActionGroup;
 class QLabel;
 class QMenu;
 class DebuggerWindow;
+class ProfilerDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -44,6 +46,7 @@ class MainWindow : public QMainWindow
 		void onInputConfig(void);
 		void onAbout(void);
 		void setDebuggerVisible(bool visible);
+		void onProfiler(void);
 
 	private:
 		void createMenus(void);
@@ -72,6 +75,7 @@ class MainWindow : public QMainWindow
 		std::unique_ptr<AudioDriverBase> audio;
 		std::unique_ptr<ViewerBase> viewer;
 		DebuggerWindow *debuggerWindow;
+		QPointer<ProfilerDialog> profilerDialog;
 
 		QTimer fpsTimer;
 		quint64 framesThisSecond;

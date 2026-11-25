@@ -149,6 +149,28 @@ breakpoints are not implemented yet.
 Video filters are the plain RGB renderer and the nes_ntsc filter (composite, S-Video and
 RGB presets).
 
+## Profiler
+
+Structured after the profiler of fceux. Scopes are timed with markers:
+
+    NESTOPIAQT_PROFILE_FUNC("Text that describes the scope");
+
+A marker is written to a thread local buffer at the start and at the end of the scope.
+While no capture runs, a scope costs one relaxed load and a branch. `Debug, Profiler...`
+opens the control dialog. A capture drains the buffers of all threads on a collector
+thread and streams them to a `.nstprof` file (format documented in
+`src/profiler/ProfilerCapture.h`). The dialog also opens captures in a timeline with one
+lane per thread and nested markers: zoom and pan with the wheel and by dragging, a click
+sets a time reference, `Frame Marker` selects the marker that counts as a frame (the
+emulator frame by default), and `Find Marker` steps through markers by name, function or
+length. `scripts/profiler_dump.py` prints a capture as text.
+
+Markers are placed in the emulation thread, the frame handler, the viewers and the audio
+device callback, and `GuiBusyProfiler` marks the time the GUI thread is busy. Setting
+`NESTOPIAQT_EVENT_TALLY` in the environment prints event counts per receiver class every
+5 seconds. `-DNESTOPIAQT_PROFILER_ENABLE=OFF` removes the markers and the capture tooling,
+captures can still be viewed.
+
 ## Layout
 
     qt/src/core     NesCore (Nestopia API wrapper), EmulationThread
@@ -157,6 +179,8 @@ RGB presets).
     src/input    InputManager, JoystickSystem, InputConfigDialog
     src/ui       MainWindow
     qt/src/debugger DebuggerWindow, assembly view, tabbed panels and 6502 disassembler
+    src/profiler Profiler markers, capture writer and reader, timeline viewer, dialog
+    scripts      profiler_dump.py
     tests        smoke tests
 
 ## Not implemented yet

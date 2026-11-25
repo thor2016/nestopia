@@ -24,6 +24,8 @@
 
 #include "debugger/DebuggerWindow.h"
 #include "input/InputConfigDialog.h"
+#include "profiler/Profiler.h"
+#include "profiler/ProfilerDialog.h"
 
 #ifndef NESTOPIAQT_DATABASE_FALLBACK
 #define NESTOPIAQT_DATABASE_FALLBACK ""
@@ -166,6 +168,9 @@ void MainWindow::shutdown(void)
 	delete debuggerWindow;
 	debuggerWindow = nullptr;
 
+	// Stops a running capture and writes its footer
+	delete profilerDialog;
+
 	// No more frames, no more audio writes
 	emulation.stop();
 
@@ -264,6 +269,10 @@ void MainWindow::createMenus(void)
 	debuggerAction->setObjectName(QStringLiteral("debuggerAction"));
 	debuggerAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
 	connect(debuggerAction, &QAction::toggled, this, &MainWindow::setDebuggerVisible);
+
+	QAction *profilerAction = debugMenu->addAction(tr("&Profiler..."), this, &MainWindow::onProfiler);
+	profilerAction->setObjectName(QStringLiteral("profilerAction"));
+	profilerAction->setStatusTip(tr("Capture profiler markers from all threads to a file and view captures."));
 
 	// ---- View
 	QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
@@ -467,6 +476,19 @@ void MainWindow::setDebuggerVisible(bool visible)
 	}
 }
 
+void MainWindow::onProfiler(void)
+{
+	if (profilerDialog == nullptr)
+	{
+		// Deletes itself when closed
+		profilerDialog = new ProfilerDialog(this);
+	}
+
+	profilerDialog->show();
+	profilerDialog->raise();
+	profilerDialog->activateWindow();
+}
+
 // --------------------------------------------------------------------------
 // Video
 // --------------------------------------------------------------------------
@@ -517,11 +539,14 @@ void MainWindow::selectVideoDriver(ViewerBase::Driver driver)
 
 void MainWindow::pushFrameToViewer(void)
 {
+	NESTOPIAQT_PROFILE_FUNC("Push Frame To Viewer");
+
 	if (!viewer)
 	{
 		return;
 	}
 
+	NESTOPIAQT_PROFILE_FUNC("Push Frame Lock And Copy");
 	EmulationThread::Locker lock(emulation.mutex());
 	const NesCore &core = emulation.core();
 
@@ -772,6 +797,8 @@ void MainWindow::updateStatus(void)
 
 void MainWindow::onFrameFinished(quint64)
 {
+	NESTOPIAQT_PROFILE_FUNC("Frame Finished Handler");
+
 	++framesThisSecond;
 
 	if (!viewer)

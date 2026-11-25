@@ -4,6 +4,8 @@
 #include <QOpenGLFunctions>
 #include <QSurfaceFormat>
 
+#include "profiler/Profiler.h"
+
 ViewerGL::ViewerGL(const Options &options, QWidget *parent)
 	: QOpenGLWidget(parent),
 	  ViewerBase(options)
@@ -51,6 +53,8 @@ void ViewerGL::initializeGL(void)
 
 void ViewerGL::paintGL(void)
 {
+	NESTOPIAQT_PROFILE_FUNC("Viewer GL paintGL");
+
 	QOpenGLFunctions *functions = context()->functions();
 	const QSize pixelSize = size() * devicePixelRatioF();
 

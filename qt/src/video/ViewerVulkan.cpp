@@ -9,6 +9,7 @@
 #include <QtDebug>
 
 #include "core/NesCore.h"
+#include "profiler/Profiler.h"
 #include "video/VulkanShaders.h"
 
 namespace
@@ -448,6 +449,8 @@ void VulkanRenderer::transition(VkCommandBuffer cb, VkImageLayout from, VkImageL
 
 void VulkanRenderer::startNextFrame(void)
 {
+	NESTOPIAQT_PROFILE_FUNC("Viewer Vulkan startNextFrame");
+
 	const QSize size = window->swapChainImageSize();
 	VkCommandBuffer cb = window->currentCommandBuffer();
 	const QImage &frame = viewer->frame();

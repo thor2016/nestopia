@@ -4,6 +4,8 @@
 
 #include <SDL.h>
 
+#include "profiler/GuiBusyProfiler.h"
+#include "profiler/Profiler.h"
 #include "ui/MainWindow.h"
 
 int main(int argc, char *argv[])
@@ -15,6 +17,14 @@ int main(int argc, char *argv[])
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
 
 	QApplication app(argc, argv);
+
+	NESTOPIAQT_PROFILER_SET_THREAD_NAME("GUI");
+
+#ifdef NESTOPIAQT_PROFILER_ENABLE
+	GuiBusyProfiler guiBusyProfiler;
+
+	app.installEventFilter(&guiBusyProfiler);
+#endif
 
 	QCoreApplication::setOrganizationName(QStringLiteral("NestopiaQt"));
 	QCoreApplication::setApplicationName(QStringLiteral("NestopiaQt"));

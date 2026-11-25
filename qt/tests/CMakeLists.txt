@@ -29,6 +29,14 @@ set_tests_properties(debugger_widget PROPERTIES
     TIMEOUT 20
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(profiler_test profiler_test.cpp)
+target_link_libraries(profiler_test PRIVATE nestopiaqt_shell)
+add_test(NAME profiler COMMAND profiler_test)
+set_tests_properties(profiler PROPERTIES
+    SKIP_RETURN_CODE 77
+    TIMEOUT 60
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SDL_AUDIODRIVER=dummy")
+
 add_executable(gui_smoke_test gui_smoke_test.cpp)
 target_link_libraries(gui_smoke_test PRIVATE nestopiaqt_shell)
 

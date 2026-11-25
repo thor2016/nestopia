@@ -4,6 +4,7 @@
 #include <thread>
 
 #include "input/InputManager.h"
+#include "profiler/Profiler.h"
 
 namespace
 {
@@ -179,6 +180,8 @@ bool EmulationThread::shouldRun(void) const
 
 void EmulationThread::run(void)
 {
+	NESTOPIAQT_PROFILER_SET_THREAD_NAME("Emulator");
+
 	Clock::time_point deadline;
 	bool paced = false;
 
@@ -196,6 +199,7 @@ void EmulationThread::run(void)
 
 		if (inputManager != nullptr)
 		{
+			NESTOPIAQT_PROFILE_FUNC("EMU Thread Input Update");
 			inputManager->applyTo(nesCore);
 		}
 
@@ -206,7 +210,10 @@ void EmulationThread::run(void)
 
 		lock.unlock();
 
-		emit frameFinished(frameNumber);
+		{
+			NESTOPIAQT_PROFILE_FUNC("EMU Thread Frame Signal");
+			emit frameFinished(frameNumber);
+		}
 
 		const Clock::time_point now = Clock::now();
 
@@ -224,8 +231,14 @@ void EmulationThread::run(void)
 			deadline = now;
 		}
 
-		sleepUntil(deadline);
+		{
+			NESTOPIAQT_PROFILE_FUNC("EMU Thread Frame Pacing Sleep");
+			sleepUntil(deadline);
+		}
 
-		lock.relock();
+		{
+			NESTOPIAQT_PROFILE_FUNC("EMU Thread Lock Wait");
+			lock.relock();
+		}
 	}
 }

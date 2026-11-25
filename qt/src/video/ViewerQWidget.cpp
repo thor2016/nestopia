@@ -2,6 +2,9 @@
 
 #include <QPaintEvent>
 #include <QPainter>
+#include <QResizeEvent>
+
+#include "profiler/Profiler.h"
 
 ViewerQWidget::ViewerQWidget(const Options &options, QWidget *parent)
 	: QWidget(parent),
@@ -13,19 +16,68 @@ ViewerQWidget::ViewerQWidget(const Options &options, QWidget *parent)
 	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
 
-void ViewerQWidget::paintEvent(QPaintEvent *)
+void ViewerQWidget::queueRedraw(void)
 {
-	QPainter painter(this);
+	const QRect target = targetRect(size());
 
-	painter.fillRect(rect(), Qt::black);
+	if (fullRepaint || target.isEmpty() || target != lastPaintRect)
+	{
+		update();
+	}
+	else
+	{
+		update(target);
+	}
+}
+
+void ViewerQWidget::resizeEvent(QResizeEvent *event)
+{
+	NESTOPIAQT_PROFILE_FUNC("Viewer QWidget resizeEvent");
+
+	fullRepaint = true;
+	QWidget::resizeEvent(event);
+}
+
+void ViewerQWidget::optionsChanged(void)
+{
+	fullRepaint = true;
+	update();
+}
+
+void ViewerQWidget::paintEvent(QPaintEvent *event)
+{
+	NESTOPIAQT_PROFILE_FUNC("Viewer QWidget paintEvent");
+
+	QPainter painter(this);
 
 	const QRect target = targetRect(size());
 
 	if (target.isEmpty())
 	{
+		painter.fillRect(rect(), Qt::black);
+		lastPaintRect = QRect();
 		return;
 	}
 
+	// Only the area around the picture needs the background, the picture covers the rest
+	const int viewWidth = width();
+	const int viewHeight = height();
+	const int right = target.x() + target.width();
+	const int bottom = target.y() + target.height();
+
+	painter.fillRect(0, 0, target.x(), viewHeight, Qt::black);
+	painter.fillRect(right, 0, viewWidth - right, viewHeight, Qt::black);
+	painter.fillRect(target.x(), 0, target.width(), target.y(), Qt::black);
+	painter.fillRect(target.x(), bottom, target.width(), viewHeight - bottom, Qt::black);
+
 	painter.setRenderHint(QPainter::SmoothPixmapTransform, linearFilter());
 	painter.drawImage(target, frame());
+
+	lastPaintRect = target;
+
+	// A partial repaint leaves the area around the picture as it was
+	if (event->rect().contains(rect()))
+	{
+		fullRepaint = false;
+	}
 }

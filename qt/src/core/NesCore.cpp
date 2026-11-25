@@ -11,6 +11,7 @@
 #include <QtDebug>
 
 #include "audio/AudioDriver.h"
+#include "profiler/Profiler.h"
 #include "NstCpu.hpp"
 #include "NstMachine.hpp"
 
@@ -274,6 +275,8 @@ unsigned int NesCore::peekCpu(unsigned int address)
 
 void NesCore::runFrame(void)
 {
+	NESTOPIAQT_PROFILE_FUNC("Emulate Single Frame");
+
 	Video::Output videoOutput(frame.data(), long(width) * long(sizeof(uint32_t)));
 	Nes::Api::Sound::Output soundOutput;
 	int sampleCount = 0;
@@ -294,7 +297,11 @@ void NesCore::runFrame(void)
 		soundOutput = Nes::Api::Sound::Output(soundBuffer.data(), uint(sampleCount));
 	}
 
-	emulator.Execute(&videoOutput, audio != nullptr ? &soundOutput : nullptr, &controllers);
+	{
+		NESTOPIAQT_PROFILE_FUNC("Nestopia Execute");
+		emulator.Execute(&videoOutput, audio != nullptr ? &soundOutput : nullptr, &controllers);
+	}
+
 	++frames;
 
 	if (audio != nullptr)
