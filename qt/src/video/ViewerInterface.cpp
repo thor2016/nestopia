@@ -7,7 +7,7 @@
 #include "video/ViewerGL.h"
 #include "video/ViewerQWidget.h"
 #include "video/ViewerSDL.h"
-#ifdef NESTOPIAQT_HAVE_VULKAN
+#ifdef NESTUX_HAVE_VULKAN
 #include "video/ViewerVulkan.h"
 #endif
 
@@ -44,7 +44,7 @@ bool ViewerBase::isCompiledIn(Driver driver)
 		case DriverQWidget:
 			return true;
 		case DriverVulkan:
-#ifdef NESTOPIAQT_HAVE_VULKAN
+#ifdef NESTUX_HAVE_VULKAN
 			return true;
 #else
 			return false;
@@ -65,7 +65,7 @@ ViewerBase *ViewerBase::create(Driver driver, const Options &options, QWidget *p
 		case DriverQWidget:
 			return new ViewerQWidget(options, parent);
 		case DriverVulkan:
-#ifdef NESTOPIAQT_HAVE_VULKAN
+#ifdef NESTUX_HAVE_VULKAN
 			return new ViewerVulkan(options, parent);
 #else
 			return nullptr;

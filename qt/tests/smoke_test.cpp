@@ -94,10 +94,10 @@ int main(int argc, char *argv[])
 	InputManager input;
 
 	emulation.setInputManager(&input);
-	// NESTOPIAQT_TEST_AUDIO=sdl or qt runs against a real audio device
-	const QByteArray realAudio = qgetenv("NESTOPIAQT_TEST_AUDIO").toLower();
+	// NESTUX_TEST_AUDIO=sdl or qt runs against a real audio device
+	const QByteArray realAudio = qgetenv("NESTUX_TEST_AUDIO").toLower();
 	// Sanitizer builds are too slow to keep the pace
-	const bool timing = !qEnvironmentVariableIsSet("NESTOPIAQT_TEST_SKIP_TIMING");
+	const bool timing = !qEnvironmentVariableIsSet("NESTUX_TEST_SKIP_TIMING");
 	if (realAudio == "sdl")
 	{
 		audio.reset(AudioDriverBase::create(AudioDriverBase::DriverSDL));
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 		EmulationThread::Locker lock(emulation.mutex());
 		(void)emulation.core().frameCount();
 
-		if (++lockedReads % 25 == 0 && qEnvironmentVariableIsSet("NESTOPIAQT_TEST_VERBOSE"))
+		if (++lockedReads % 25 == 0 && qEnvironmentVariableIsSet("NESTUX_TEST_VERBOSE"))
 		{
 			const AudioDriverBase::Stats stats = audio->stats();
 

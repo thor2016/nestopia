@@ -275,7 +275,7 @@ unsigned int NesCore::peekCpu(unsigned int address)
 
 void NesCore::runFrame(void)
 {
-	NESTOPIAQT_PROFILE_FUNC("Emulate Single Frame");
+	NESTUX_PROFILE_FUNC("Emulate Single Frame");
 
 	Video::Output videoOutput(frame.data(), long(width) * long(sizeof(uint32_t)));
 	Nes::Api::Sound::Output soundOutput;
@@ -298,7 +298,7 @@ void NesCore::runFrame(void)
 	}
 
 	{
-		NESTOPIAQT_PROFILE_FUNC("Nestopia Execute");
+		NESTUX_PROFILE_FUNC("Nestopia Execute");
 		emulator.Execute(&videoOutput, audio != nullptr ? &soundOutput : nullptr, &controllers);
 	}
 

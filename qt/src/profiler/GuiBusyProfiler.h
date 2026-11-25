@@ -4,12 +4,12 @@
 // is about to block again, rather than one marker per widget event. Install it as an
 // event filter on the application object after the application was created.
 //
-// With NESTOPIAQT_EVENT_TALLY set in the environment, the number of events delivered to
+// With NESTUX_EVENT_TALLY set in the environment, the number of events delivered to
 // each receiver class by event type is printed to stderr every 5 seconds.
 
 #pragma once
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 
 #include <map>
 #include <optional>
@@ -42,4 +42,4 @@ class GuiBusyProfiler : public QObject
 		std::map<std::pair<std::string, int>, unsigned int> tally;
 };
 
-#endif // NESTOPIAQT_PROFILER_ENABLE
+#endif // NESTUX_PROFILER_ENABLE

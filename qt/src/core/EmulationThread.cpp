@@ -180,7 +180,7 @@ bool EmulationThread::shouldRun(void) const
 
 void EmulationThread::run(void)
 {
-	NESTOPIAQT_PROFILER_SET_THREAD_NAME("Emulator");
+	NESTUX_PROFILER_SET_THREAD_NAME("Emulator");
 
 	Clock::time_point deadline;
 	bool paced = false;
@@ -199,7 +199,7 @@ void EmulationThread::run(void)
 
 		if (inputManager != nullptr)
 		{
-			NESTOPIAQT_PROFILE_FUNC("EMU Thread Input Update");
+			NESTUX_PROFILE_FUNC("EMU Thread Input Update");
 			inputManager->applyTo(nesCore);
 		}
 
@@ -211,7 +211,7 @@ void EmulationThread::run(void)
 		lock.unlock();
 
 		{
-			NESTOPIAQT_PROFILE_FUNC("EMU Thread Frame Signal");
+			NESTUX_PROFILE_FUNC("EMU Thread Frame Signal");
 			emit frameFinished(frameNumber);
 		}
 
@@ -232,12 +232,12 @@ void EmulationThread::run(void)
 		}
 
 		{
-			NESTOPIAQT_PROFILE_FUNC("EMU Thread Frame Pacing Sleep");
+			NESTUX_PROFILE_FUNC("EMU Thread Frame Pacing Sleep");
 			sleepUntil(deadline);
 		}
 
 		{
-			NESTOPIAQT_PROFILE_FUNC("EMU Thread Lock Wait");
+			NESTUX_PROFILE_FUNC("EMU Thread Lock Wait");
 			lock.relock();
 		}
 	}

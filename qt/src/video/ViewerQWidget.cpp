@@ -32,7 +32,7 @@ void ViewerQWidget::queueRedraw(void)
 
 void ViewerQWidget::resizeEvent(QResizeEvent *event)
 {
-	NESTOPIAQT_PROFILE_FUNC("Viewer QWidget resizeEvent");
+	NESTUX_PROFILE_FUNC("Viewer QWidget resizeEvent");
 
 	fullRepaint = true;
 	QWidget::resizeEvent(event);
@@ -46,11 +46,11 @@ void ViewerQWidget::optionsChanged(void)
 
 void ViewerQWidget::paintEvent(QPaintEvent *event)
 {
-	NESTOPIAQT_PROFILE_FUNC("Viewer QWidget paintEvent");
+	NESTUX_PROFILE_FUNC("Viewer QWidget paintEvent");
 
 	QPainter painter;
 	{
-		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget painter begin");
+		NESTUX_PROFILE_FUNC("Viewer QWidget painter begin");
 		painter.begin(this);
 	}
 
@@ -70,7 +70,7 @@ void ViewerQWidget::paintEvent(QPaintEvent *event)
 	const int bottom = target.y() + target.height();
 
 	{
-		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget fill background");
+		NESTUX_PROFILE_FUNC("Viewer QWidget fill background");
 		painter.fillRect(0, 0, target.x(), viewHeight, Qt::black);
 		painter.fillRect(right, 0, viewWidth - right, viewHeight, Qt::black);
 		painter.fillRect(target.x(), 0, target.width(), target.y(), Qt::black);
@@ -81,17 +81,17 @@ void ViewerQWidget::paintEvent(QPaintEvent *event)
 
 	if (linearFilter())
 	{
-		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget drawImage linear");
+		NESTUX_PROFILE_FUNC("Viewer QWidget drawImage linear");
 		painter.drawImage(target, frame());
 	}
 	else
 	{
-		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget drawImage nearest");
+		NESTUX_PROFILE_FUNC("Viewer QWidget drawImage nearest");
 		painter.drawImage(target, frame());
 	}
 
 	{
-		NESTOPIAQT_PROFILE_FUNC("Viewer QWidget painter end");
+		NESTUX_PROFILE_FUNC("Viewer QWidget painter end");
 		painter.end();
 	}
 

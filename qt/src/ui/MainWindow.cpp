@@ -27,8 +27,8 @@
 #include "profiler/Profiler.h"
 #include "profiler/ProfilerDialog.h"
 
-#ifndef NESTOPIAQT_DATABASE_FALLBACK
-#define NESTOPIAQT_DATABASE_FALLBACK ""
+#ifndef NESTUX_DATABASE_FALLBACK
+#define NESTUX_DATABASE_FALLBACK ""
 #endif
 
 namespace
@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 		const QString databases[] = {
 			QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("NstDatabase.xml")),
-			QStringLiteral(NESTOPIAQT_DATABASE_FALLBACK)
+			QStringLiteral(NESTUX_DATABASE_FALLBACK)
 		};
 
 		bool databaseLoaded = false;
@@ -539,14 +539,14 @@ void MainWindow::selectVideoDriver(ViewerBase::Driver driver)
 
 void MainWindow::pushFrameToViewer(void)
 {
-	NESTOPIAQT_PROFILE_FUNC("Push Frame To Viewer");
+	NESTUX_PROFILE_FUNC("Push Frame To Viewer");
 
 	if (!viewer)
 	{
 		return;
 	}
 
-	NESTOPIAQT_PROFILE_FUNC("Push Frame Lock And Copy");
+	NESTUX_PROFILE_FUNC("Push Frame Lock And Copy");
 	EmulationThread::Locker lock(emulation.mutex());
 	const NesCore &core = emulation.core();
 
@@ -797,7 +797,7 @@ void MainWindow::updateStatus(void)
 
 void MainWindow::onFrameFinished(quint64)
 {
-	NESTOPIAQT_PROFILE_FUNC("Frame Finished Handler");
+	NESTUX_PROFILE_FUNC("Frame Finished Handler");
 
 	++framesThisSecond;
 
@@ -845,9 +845,9 @@ void MainWindow::onInputConfig(void)
 
 void MainWindow::onAbout(void)
 {
-	QMessageBox::about(this, tr("About NestopiaQt"),
-		tr("<b>NestopiaQt</b><br>"
-		   "A Qt and SDL2 shell around the Nestopia core.<br><br>"
+	QMessageBox::about(this, tr("About Nestux"),
+		tr("<b>Nestux</b><br>"
+		   "A Qt and SDL2 shell around the Nestopia core, with fceux style tooling.<br><br>"
 		   "Nestopia is free software licensed under the GNU General Public License, version 2 or later."));
 }
 

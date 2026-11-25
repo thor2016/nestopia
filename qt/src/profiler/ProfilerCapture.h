@@ -28,7 +28,7 @@
 
 #pragma once
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 
 #include <array>
 #include <atomic>
@@ -86,4 +86,4 @@ class ProfilerCaptureThread : public QThread
 		std::unordered_map<uint32_t, std::string> announcedThreads;
 };
 
-#endif // NESTOPIAQT_PROFILER_ENABLE
+#endif // NESTUX_PROFILER_ENABLE

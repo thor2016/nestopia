@@ -18,9 +18,9 @@ int main(int argc, char *argv[])
 
 	QApplication app(argc, argv);
 
-	NESTOPIAQT_PROFILER_SET_THREAD_NAME("GUI");
+	NESTUX_PROFILER_SET_THREAD_NAME("GUI");
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 	GuiBusyProfiler guiBusyProfiler;
 
 	app.installEventFilter(&guiBusyProfiler);

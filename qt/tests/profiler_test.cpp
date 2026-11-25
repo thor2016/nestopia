@@ -28,7 +28,7 @@
 #include "profiler/ProfilerViewer.h"
 #include "ui/MainWindow.h"
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 #include "profiler/ProfilerCapture.h"
 #endif
 
@@ -123,15 +123,15 @@ namespace
 		return count;
 	}
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 	void innerScope(void)
 	{
-		NESTOPIAQT_PROFILE_FUNC("Inner");
+		NESTUX_PROFILE_FUNC("Inner");
 	}
 
 	void outerScope(void)
 	{
-		NESTOPIAQT_PROFILE_FUNC("Outer");
+		NESTUX_PROFILE_FUNC("Outer");
 		innerScope();
 	}
 
@@ -154,12 +154,12 @@ namespace
 		capture.start();
 		check(waitUntil([]() { return Profiler::Manager::instance().isEnabled(); }), "capture turns the profiler on");
 
-		NESTOPIAQT_PROFILER_SET_THREAD_NAME("Main");
+		NESTUX_PROFILER_SET_THREAD_NAME("Main");
 
 		// This thread is gone before the capture ends, its markers must still arrive
 		std::thread worker([]()
 		{
-			NESTOPIAQT_PROFILER_SET_THREAD_NAME("Worker");
+			NESTUX_PROFILER_SET_THREAD_NAME("Worker");
 
 			for (int i = 0; i < workerScopes; i++)
 			{
@@ -428,7 +428,7 @@ namespace
 
 int main(int argc, char **argv)
 {
-#ifndef NESTOPIAQT_PROFILER_ENABLE
+#ifndef NESTUX_PROFILER_ENABLE
 	(void)argc;
 	(void)argv;
 	std::fprintf(stderr, "Profiler is not compiled in, skipping\n");

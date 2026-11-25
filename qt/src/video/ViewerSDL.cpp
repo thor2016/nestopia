@@ -145,7 +145,7 @@ void ViewerSDL::optionsChanged(void)
 
 void ViewerSDL::resizeEvent(QResizeEvent *)
 {
-	NESTOPIAQT_PROFILE_FUNC("Viewer SDL resizeEvent");
+	NESTUX_PROFILE_FUNC("Viewer SDL resizeEvent");
 
 	// SDL does not follow the size of a foreign window, start over
 	if (window != nullptr)
@@ -162,7 +162,7 @@ void ViewerSDL::paintEvent(QPaintEvent *)
 
 void ViewerSDL::render(void)
 {
-	NESTOPIAQT_PROFILE_FUNC("Viewer SDL render");
+	NESTUX_PROFILE_FUNC("Viewer SDL render");
 
 	if (renderer == nullptr)
 	{

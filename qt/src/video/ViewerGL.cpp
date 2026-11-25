@@ -53,7 +53,7 @@ void ViewerGL::initializeGL(void)
 
 void ViewerGL::paintGL(void)
 {
-	NESTOPIAQT_PROFILE_FUNC("Viewer GL paintGL");
+	NESTUX_PROFILE_FUNC("Viewer GL paintGL");
 
 	QOpenGLFunctions *functions = context()->functions();
 	const QSize pixelSize = size() * devicePixelRatioF();

@@ -6,13 +6,13 @@ last revision that has it is tagged `win32-legacy`.
 * `source/core`: the Nestopia emulation core. It is synchronized with
   [JG Nestopia](https://gitlab.com/jgemu/nestopia) and is being extended with debugging
   hooks, see `Core updates` below.
-* `qt`: the Qt and SDL2 GUI, see [qt/README.md](qt/README.md).
+* `qt`: Nestux, the Qt and SDL2 GUI, see [qt/README.md](qt/README.md).
 
 ## Build
 
     cmake -S qt -B build
     cmake --build build -j
-    ./build/nestopiaqt [rom.nes]
+    ./build/nestux [rom.nes]
 
 ## Core updates
 

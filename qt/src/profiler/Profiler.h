@@ -2,18 +2,18 @@
 //
 // High precision timing of scopes. A marker is written to a thread local buffer at the start
 // and at the end of a profiled scope, a collector (see ProfilerCapture.h) drains the buffers
-// of all threads. Nothing of this is compiled in unless NESTOPIAQT_PROFILER_ENABLE is defined.
+// of all threads. Nothing of this is compiled in unless NESTUX_PROFILER_ENABLE is defined.
 //
 // To time a scope, put the macro at the top of it:
 //
-//     NESTOPIAQT_PROFILE_FUNC("Text that describes the scope");
+//     NESTUX_PROFILE_FUNC("Text that describes the scope");
 //
-// Without NESTOPIAQT_PROFILER_ENABLE the macros expand to nothing. While the profiler is
+// Without NESTUX_PROFILER_ENABLE the macros expand to nothing. While the profiler is
 // compiled in but not capturing, a profiled scope costs one relaxed load and a branch.
 
 #pragma once
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 
 #include <atomic>
 #include <chrono>
@@ -82,9 +82,9 @@ namespace Profiler
 	extern std::atomic<bool> enabledFlag;
 
 #if defined(__GNUC__) || defined(__clang__)
-#define NESTOPIAQT_PROFILER_UNLIKELY(x)  __builtin_expect(!!(x), 0)
+#define NESTUX_PROFILER_UNLIKELY(x)  __builtin_expect(!!(x), 0)
 #else
-#define NESTOPIAQT_PROFILER_UNLIKELY(x)  (x)
+#define NESTUX_PROFILER_UNLIKELY(x)  (x)
 #endif
 
 	class FuncScoped
@@ -93,7 +93,7 @@ namespace Profiler
 			// When profiling is disabled this is one relaxed load and a branch, with no calls
 			explicit FuncScoped(const Site *s)
 			{
-				if (NESTOPIAQT_PROFILER_UNLIKELY(enabledFlag.load(std::memory_order_relaxed)))
+				if (NESTUX_PROFILER_UNLIKELY(enabledFlag.load(std::memory_order_relaxed)))
 				{
 					site = s;
 					pushMarker(s, MarkerType::Start);
@@ -102,7 +102,7 @@ namespace Profiler
 
 			~FuncScoped(void)
 			{
-				if (NESTOPIAQT_PROFILER_UNLIKELY(site != nullptr))
+				if (NESTUX_PROFILER_UNLIKELY(site != nullptr))
 				{
 					pushMarker(site, MarkerType::End);
 				}
@@ -165,26 +165,26 @@ namespace Profiler
 }
 
 #if defined(__GNUC__) || defined(__clang__)
-#define NESTOPIAQT_PROFILE_FUNC_NAME  __PRETTY_FUNCTION__
+#define NESTUX_PROFILE_FUNC_NAME  __PRETTY_FUNCTION__
 #elif defined(_MSC_VER)
-#define NESTOPIAQT_PROFILE_FUNC_NAME  __FUNCSIG__
+#define NESTUX_PROFILE_FUNC_NAME  __FUNCSIG__
 #else
-#define NESTOPIAQT_PROFILE_FUNC_NAME  __func__
+#define NESTUX_PROFILE_FUNC_NAME  __func__
 #endif
 
-#define NESTOPIAQT_PROFILE_CONCAT_IMPL(a, b) a##b
-#define NESTOPIAQT_PROFILE_CONCAT(a, b) NESTOPIAQT_PROFILE_CONCAT_IMPL(a, b)
+#define NESTUX_PROFILE_CONCAT_IMPL(a, b) a##b
+#define NESTUX_PROFILE_CONCAT(a, b) NESTUX_PROFILE_CONCAT_IMPL(a, b)
 
-#define NESTOPIAQT_PROFILE_FUNC(comment)  \
-	static constexpr Profiler::Site NESTOPIAQT_PROFILE_CONCAT(profSite, __LINE__) = \
-		{ __LINE__, __FILE__, NESTOPIAQT_PROFILE_FUNC_NAME, comment }; \
-	Profiler::FuncScoped NESTOPIAQT_PROFILE_CONCAT(profScope, __LINE__)( &NESTOPIAQT_PROFILE_CONCAT(profSite, __LINE__) )
+#define NESTUX_PROFILE_FUNC(comment)  \
+	static constexpr Profiler::Site NESTUX_PROFILE_CONCAT(profSite, __LINE__) = \
+		{ __LINE__, __FILE__, NESTUX_PROFILE_FUNC_NAME, comment }; \
+	Profiler::FuncScoped NESTUX_PROFILE_CONCAT(profScope, __LINE__)( &NESTUX_PROFILE_CONCAT(profSite, __LINE__) )
 
-#define NESTOPIAQT_PROFILER_SET_THREAD_NAME(name)  Profiler::setThreadName(name)
+#define NESTUX_PROFILER_SET_THREAD_NAME(name)  Profiler::setThreadName(name)
 
-#else  // NESTOPIAQT_PROFILER_ENABLE not defined
+#else  // NESTUX_PROFILER_ENABLE not defined
 
-#define NESTOPIAQT_PROFILE_FUNC(comment)
-#define NESTOPIAQT_PROFILER_SET_THREAD_NAME(name)
+#define NESTUX_PROFILE_FUNC(comment)
+#define NESTUX_PROFILER_SET_THREAD_NAME(name)
 
-#endif // NESTOPIAQT_PROFILER_ENABLE
+#endif // NESTUX_PROFILER_ENABLE

@@ -449,7 +449,7 @@ void VulkanRenderer::transition(VkCommandBuffer cb, VkImageLayout from, VkImageL
 
 void VulkanRenderer::startNextFrame(void)
 {
-	NESTOPIAQT_PROFILE_FUNC("Viewer Vulkan startNextFrame");
+	NESTUX_PROFILE_FUNC("Viewer Vulkan startNextFrame");
 
 	const QSize size = window->swapChainImageSize();
 	VkCommandBuffer cb = window->currentCommandBuffer();

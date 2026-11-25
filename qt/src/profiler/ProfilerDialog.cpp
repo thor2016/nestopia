@@ -302,7 +302,7 @@ ProfilerDialog::~ProfilerDialog(void)
 
 	settings.setValue(QStringLiteral("profiler/geometry"), saveGeometry());
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 	if (captureThread != nullptr)
 	{
 		captureThread->stopCapture();
@@ -354,11 +354,11 @@ void ProfilerDialog::browseClicked(void)
 
 void ProfilerDialog::startStopClicked(void)
 {
-#ifndef NESTOPIAQT_PROFILER_ENABLE
+#ifndef NESTUX_PROFILER_ENABLE
 	QMessageBox::information(this, tr("Profiler"),
 		tr("Capturing profiler data is not available in this build.\n\n"
 		   "Rebuild NestopiaQt with the profiler enabled "
-		   "(cmake -DNESTOPIAQT_PROFILER_ENABLE=ON) to record captures. "
+		   "(cmake -DNESTUX_PROFILER_ENABLE=ON) to record captures. "
 		   "Existing capture files can still be opened and viewed."));
 #else
 	if (captureThread != nullptr)
@@ -372,7 +372,7 @@ void ProfilerDialog::startStopClicked(void)
 #endif
 }
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 void ProfilerDialog::startCapture(void)
 {
 	QSettings settings;

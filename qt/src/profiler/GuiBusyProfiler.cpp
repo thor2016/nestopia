@@ -1,6 +1,6 @@
 #include "profiler/GuiBusyProfiler.h"
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 
 #include <algorithm>
 #include <cstdio>
@@ -12,7 +12,7 @@
 
 GuiBusyProfiler::GuiBusyProfiler(QObject *parent)
 	: QObject(parent),
-	  tallyEnabled(qEnvironmentVariableIsSet("NESTOPIAQT_EVENT_TALLY"))
+	  tallyEnabled(qEnvironmentVariableIsSet("NESTUX_EVENT_TALLY"))
 {
 	QAbstractEventDispatcher *dispatcher = QAbstractEventDispatcher::instance();
 
@@ -77,4 +77,4 @@ void GuiBusyProfiler::tallyEvent(QObject *watched, QEvent *event)
 	tallyTimer.restart();
 }
 
-#endif // NESTOPIAQT_PROFILER_ENABLE
+#endif // NESTUX_PROFILER_ENABLE

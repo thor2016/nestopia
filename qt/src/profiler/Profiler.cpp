@@ -1,6 +1,6 @@
 #include "profiler/Profiler.h"
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 
 namespace Profiler
 {
@@ -169,4 +169,4 @@ namespace Profiler
 	}
 }
 
-#endif // NESTOPIAQT_PROFILER_ENABLE
+#endif // NESTUX_PROFILER_ENABLE

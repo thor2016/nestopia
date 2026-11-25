@@ -10,7 +10,7 @@
 #include "profiler/ProfilerCaptureFile.h"
 #include "profiler/ProfilerViewer.h"
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 #include "profiler/ProfilerCapture.h"
 #endif
 
@@ -58,7 +58,7 @@ class ProfilerDialog : public QDialog
 		QLineEdit   *findEdit;
 		QLabel      *findLabel;
 
-#ifdef NESTOPIAQT_PROFILER_ENABLE
+#ifdef NESTUX_PROFILER_ENABLE
 		ProfilerCaptureThread *captureThread = nullptr;
 #endif
 		ProfilerLoadThread *loadThread = nullptr;

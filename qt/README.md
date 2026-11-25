@@ -1,27 +1,27 @@
-# NestopiaQt
+# Nestux
 
-A Qt 6 and SDL2 shell around the Nestopia core in `source/core`, structured after the
-Qt GUI of [fceux](https://github.com/TASEmulators/fceux).
+Nestux is a Qt 6 and SDL2 shell around the Nestopia core in `source/core`, structured
+after the Qt GUI of [fceux](https://github.com/TASEmulators/fceux).
 
 ## Build
 
 Requirements: CMake 3.21, a C++17 compiler, Qt 6 (Widgets, OpenGL, OpenGLWidgets,
 Multimedia), SDL2, zlib. The Vulkan viewer is built when the Vulkan headers and Qt's
-Vulkan support are found (`-DNESTOPIAQT_ENABLE_VULKAN=OFF` disables it).
+Vulkan support are found (`-DNESTUX_ENABLE_VULKAN=OFF` disables it).
 
 From the repository root:
 
     cmake -S qt -B build
     cmake --build build -j
-    ./build/nestopiaqt [rom.nes]
+    ./build/nestux [rom.nes]
 
 `NstDatabase.xml` is copied next to the executable at build time and installed with it.
 Battery RAM is stored as `<rom name>.sav` in the `saves` folder of the application data
-directory.
+directory. The settings and data location is named `NestopiaQt`.
 
 ## Tests
 
-    cmake -S qt -B build -DNESTOPIAQT_TEST_ROM=/path/to/any.nes
+    cmake -S qt -B build -DNESTUX_TEST_ROM=/path/to/any.nes
     cd build && ctest --output-on-failure
 
 Without a ROM the ROM-dependent tests are skipped. `emu_smoke` runs the emulation
@@ -37,7 +37,7 @@ bookmark edits, break/step controls, and opening and closing the debugger window
 `debugger_widget` uses a generated program to test assembly navigation, breakpoint
 gutter interaction, register and flag edits, layout presets and saved tab placement.
 It needs no external ROM.
-Setting `NESTOPIAQT_TEST_AUDIO=sdl` or `qt` runs `emu_smoke` against a real audio device.
+Setting `NESTUX_TEST_AUDIO=sdl` or `qt` runs `emu_smoke` against a real audio device.
 
 ## Accuracy runner
 
@@ -153,7 +153,7 @@ RGB presets).
 
 Structured after the profiler of fceux. Scopes are timed with markers:
 
-    NESTOPIAQT_PROFILE_FUNC("Text that describes the scope");
+    NESTUX_PROFILE_FUNC("Text that describes the scope");
 
 A marker is written to a thread local buffer at the start and at the end of the scope.
 While no capture runs, a scope costs one relaxed load and a branch. `Debug, Profiler...`
@@ -167,8 +167,8 @@ length. `scripts/profiler_dump.py` prints a capture as text.
 
 Markers are placed in the emulation thread, the frame handler, the viewers and the audio
 device callback, and `GuiBusyProfiler` marks the time the GUI thread is busy. Setting
-`NESTOPIAQT_EVENT_TALLY` in the environment prints event counts per receiver class every
-5 seconds. `-DNESTOPIAQT_PROFILER_ENABLE=OFF` removes the markers and the capture tooling,
+`NESTUX_EVENT_TALLY` in the environment prints event counts per receiver class every
+5 seconds. `-DNESTUX_PROFILER_ENABLE=OFF` removes the markers and the capture tooling,
 captures can still be viewed.
 
 ## Layout

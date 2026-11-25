@@ -14,9 +14,9 @@ endif()
 
 set(CMAKE_AUTOMOC ON)
 
-option(NESTOPIAQT_ENABLE_VULKAN "Build the Vulkan video viewer when Qt and the Vulkan headers are available" ON)
-option(NESTOPIAQT_BUILD_TESTS "Build the emulation thread smoke test" ON)
-option(NESTOPIAQT_PROFILER_ENABLE "Build the profiler markers and capture tooling (near-zero cost while not capturing)" ON)
+option(NESTUX_ENABLE_VULKAN "Build the Vulkan video viewer when Qt and the Vulkan headers are available" ON)
+option(NESTUX_BUILD_TESTS "Build the emulation thread smoke test" ON)
+option(NESTUX_PROFILER_ENABLE "Build the profiler markers and capture tooling (near-zero cost while not capturing)" ON)
 
 set(NESTOPIA_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "Root of the Nestopia source tree")
 cmake_path(NORMAL_PATH NESTOPIA_ROOT)
@@ -31,19 +31,19 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Multi
 find_package(SDL2 REQUIRED)
 find_package(ZLIB REQUIRED)
 
-set(NESTOPIAQT_HAVE_VULKAN OFF)
-if(NESTOPIAQT_ENABLE_VULKAN)
+set(NESTUX_HAVE_VULKAN OFF)
+if(NESTUX_ENABLE_VULKAN)
     find_package(Vulkan)
     if(Vulkan_FOUND)
         include(CheckIncludeFileCXX)
         set(CMAKE_REQUIRED_LIBRARIES Qt6::Gui Vulkan::Vulkan)
-        check_include_file_cxx("QtGui/qvulkanwindow.h" NESTOPIAQT_QT_HAS_VULKAN)
+        check_include_file_cxx("QtGui/qvulkanwindow.h" NESTUX_QT_HAS_VULKAN)
         unset(CMAKE_REQUIRED_LIBRARIES)
-        if(NESTOPIAQT_QT_HAS_VULKAN)
-            set(NESTOPIAQT_HAVE_VULKAN ON)
+        if(NESTUX_QT_HAS_VULKAN)
+            set(NESTUX_HAVE_VULKAN ON)
         endif()
     endif()
-    if(NOT NESTOPIAQT_HAVE_VULKAN)
+    if(NOT NESTUX_HAVE_VULKAN)
         message(STATUS "Vulkan viewer disabled: Vulkan headers or Qt Vulkan support not found")
     endif()
 endif()
@@ -63,7 +63,7 @@ target_compile_options(nestopia_core PRIVATE -w)
 # --------------------------------------------------------------------------
 # Qt shell
 # --------------------------------------------------------------------------
-set(NESTOPIAQT_SHELL_SOURCES
+set(NESTUX_SHELL_SOURCES
     src/core/NesCore.cpp
     src/core/NesCore.h
     src/core/EmulationThread.cpp
@@ -115,48 +115,48 @@ set(NESTOPIAQT_SHELL_SOURCES
     src/ui/MainWindow.h
 )
 
-if(NESTOPIAQT_HAVE_VULKAN)
-    list(APPEND NESTOPIAQT_SHELL_SOURCES
+if(NESTUX_HAVE_VULKAN)
+    list(APPEND NESTUX_SHELL_SOURCES
         src/video/ViewerVulkan.cpp
         src/video/ViewerVulkan.h
         src/video/VulkanShaders.h
     )
 endif()
 
-add_library(nestopiaqt_shell STATIC ${NESTOPIAQT_SHELL_SOURCES})
-target_include_directories(nestopiaqt_shell PUBLIC src)
-target_link_libraries(nestopiaqt_shell PUBLIC
+add_library(nestux_shell STATIC ${NESTUX_SHELL_SOURCES})
+target_include_directories(nestux_shell PUBLIC src)
+target_link_libraries(nestux_shell PUBLIC
     nestopia_core
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Multimedia
     SDL2::SDL2
 )
-if(NESTOPIAQT_HAVE_VULKAN)
-    target_compile_definitions(nestopiaqt_shell PUBLIC NESTOPIAQT_HAVE_VULKAN=1)
-    target_link_libraries(nestopiaqt_shell PUBLIC Vulkan::Vulkan)
+if(NESTUX_HAVE_VULKAN)
+    target_compile_definitions(nestux_shell PUBLIC NESTUX_HAVE_VULKAN=1)
+    target_link_libraries(nestux_shell PUBLIC Vulkan::Vulkan)
 endif()
-if(NESTOPIAQT_PROFILER_ENABLE)
+if(NESTUX_PROFILER_ENABLE)
     message(STATUS "Profiler: enabled")
-    target_compile_definitions(nestopiaqt_shell PUBLIC NESTOPIAQT_PROFILER_ENABLE=1)
+    target_compile_definitions(nestux_shell PUBLIC NESTUX_PROFILER_ENABLE=1)
 else()
     message(STATUS "Profiler: disabled, captures can still be viewed")
 endif()
-target_compile_options(nestopiaqt_shell PRIVATE -Wall -Wextra)
-target_compile_definitions(nestopiaqt_shell PRIVATE NESTOPIAQT_DATABASE_FALLBACK="${NESTOPIA_ROOT}/NstDatabase.xml")
+target_compile_options(nestux_shell PRIVATE -Wall -Wextra)
+target_compile_definitions(nestux_shell PRIVATE NESTUX_DATABASE_FALLBACK="${NESTOPIA_ROOT}/NstDatabase.xml")
 
-add_executable(nestopiaqt src/main.cpp)
-target_link_libraries(nestopiaqt PRIVATE nestopiaqt_shell)
-target_compile_options(nestopiaqt PRIVATE -Wall -Wextra)
+add_executable(nestux src/main.cpp)
+target_link_libraries(nestux PRIVATE nestux_shell)
+target_compile_options(nestux PRIVATE -Wall -Wextra)
 
 # The cartridge database is looked up next to the executable.
-add_custom_command(TARGET nestopiaqt POST_BUILD
+add_custom_command(TARGET nestux POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${NESTOPIA_ROOT}/NstDatabase.xml" "$<TARGET_FILE_DIR:nestopiaqt>/NstDatabase.xml"
+            "${NESTOPIA_ROOT}/NstDatabase.xml" "$<TARGET_FILE_DIR:nestux>/NstDatabase.xml"
 )
 
-install(TARGETS nestopiaqt RUNTIME DESTINATION bin)
+install(TARGETS nestux RUNTIME DESTINATION bin)
 install(FILES "${NESTOPIA_ROOT}/NstDatabase.xml" DESTINATION bin)
 
-if(NESTOPIAQT_BUILD_TESTS)
+if(NESTUX_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
